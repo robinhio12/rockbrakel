@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Winner Popup Test</title>
+    <link rel="stylesheet" href="static/styles.css">
+    <style>
+        body {
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .test-btn {
+            padding: 10px 20px;
+            background: #ff6b35;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .test-btn:hover {
+            background: #e55a2b;
+        }
+    </style>
+</head>
+<body>
+    <h1>Winner Popup Test</h1>
+    <p>Click the buttons below to test the winner popup functionality:</p>
+    
+    <div class="test-buttons">
+        <button class="test-btn" onclick="testGeleTrui()">Test Gele Trui</button>
+        <button class="test-btn" onclick="testGroeneTrui()">Test Groene Trui</button>
+        <button class="test-btn" onclick="testBolletjesTrui()">Test Bolletjestrui</button>
+        <button class="test-btn" onclick="testWitteTrui()">Test Witte Trui</button>
+        <button class="test-btn" onclick="testAllPopups()">Test All Popups</button>
+    </div>
+
+    <script>
+        // Mock players data for testing
+        const players = [
+            { id: 1, name: 'Alice', number: 1, picture: 'player_1.png' },
+            { id: 2, name: 'Bob', number: 2, picture: 'player_2.png' },
+            { id: 3, name: 'Charlie', number: 3, picture: 'player_3.png' },
+            { id: 4, name: 'Diana', number: 4, picture: 'player_4.png' }
+        ];
+
+        // Enhanced winner popup function
+        function showWinnerPopup(playerName, jerseyName, points, playerId) {
+            // Get player picture
+            const player = players.find(p => p.id === playerId);
+            const playerPictureUrl = player && player.picture ? `/static/player_pictures/${player.picture}` : '/static/player_pictures/player_1.png';
+            
+            // Get jersey image based on jersey name
+            let jerseyImageUrl = '/static/witte trui.png'; // default
+            if (jerseyName === 'Gele Trui') {
+                jerseyImageUrl = '/static/gele trui.png';
+            } else if (jerseyName === 'Groene Trui') {
+                jerseyImageUrl = '/static/groene trui.png';
+            } else if (jerseyName === 'Bolletjestrui') {
+                jerseyImageUrl = '/static/bolletjes trui.png';
+            } else if (jerseyName === 'Witte Trui') {
+                jerseyImageUrl = '/static/witte trui.png';
+            }
+            
+            // Create popup HTML with enhanced design
+            const popupHTML = `
+                <div id="winnerPopup" class="modal-backdrop winner-popup-backdrop">
+                    <div class="modal winner-modal">
+                        <div class="winner-content">
+                            <div class="winner-header">
+                                <h2>🎉 Nieuwe Winnaar! 🎉</h2>
+                                <button id="winnerPopupClose" class="winner-close-btn">&times;</button>
+                            </div>
+                            
+                            <div class="winner-body">
+                                <div class="jersey-section">
+                                    <img src="${jerseyImageUrl}" alt="${jerseyName}" class="jersey-image">
+                                    <h3 class="jersey-name">${jerseyName}</h3>
+                                </div>
+                                
+                                <div class="winner-section">
+                                    <div class="winner-picture-container">
+                                        <img src="${playerPictureUrl}" alt="${playerName}" class="winner-picture">
+                                    </div>
+                                    <div class="winner-details">
+                                        <h3 class="winner-name">${playerName}</h3>
+                                        <p class="winner-number">#${player ? player.number : '?'}</p>
+                                        <div class="winner-score">
+                                            <span class="score-label">Score:</span>
+                                            <span class="score-value">${points} punten</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="winner-footer">
+                                <button id="winnerPopupCloseBtn" class="btn btn-primary winner-close-button">
+                                    Gefeliciteerd! 🎊
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add popup to page
+            document.body.insertAdjacentHTML('beforeend', popupHTML);
+            
+            // Add event listeners to close buttons
+            const closePopup = () => {
+                const popup = document.getElementById('winnerPopup');
+                if (popup) {
+                    popup.classList.add('fade-out');
+                    setTimeout(() => {
+                        if (popup.parentNode) {
+                            popup.remove();
+                        }
+                    }, 300);
+                }
+            };
+            
+            document.getElementById('winnerPopupClose').addEventListener('click', closePopup);
+            document.getElementById('winnerPopupCloseBtn').addEventListener('click', closePopup);
+            
+            // Close on backdrop click
+            document.getElementById('winnerPopup').addEventListener('click', (e) => {
+                if (e.target.id === 'winnerPopup') {
+                    closePopup();
+                }
+            });
+            
+            // Auto-close after 8 seconds
+            setTimeout(() => {
+                const popup = document.getElementById('winnerPopup');
+                if (popup) {
+                    closePopup();
+                }
+            }, 8000);
+        }
+
+        // Test functions
+        function testGeleTrui() {
+            showWinnerPopup('Alice', 'Gele Trui', 85, 1);
+        }
+
+        function testGroeneTrui() {
+            showWinnerPopup('Bob', 'Groene Trui', 72, 2);
+        }
+
+        function testBolletjesTrui() {
+            showWinnerPopup('Charlie', 'Bolletjestrui', 68, 3);
+        }
+
+        function testWitteTrui() {
+            showWinnerPopup('Diana', 'Witte Trui', 91, 4);
+        }
+
+        function testAllPopups() {
+            showWinnerPopup('Alice', 'Gele Trui', 85, 1);
+            setTimeout(() => showWinnerPopup('Bob', 'Groene Trui', 72, 2), 2000);
+            setTimeout(() => showWinnerPopup('Charlie', 'Bolletjestrui', 68, 3), 4000);
+            setTimeout(() => showWinnerPopup('Diana', 'Witte Trui', 91, 4), 6000);
+        }
+    </script>
+</body>
+</html>

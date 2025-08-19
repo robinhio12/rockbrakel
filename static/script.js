@@ -23,6 +23,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Initialize dark mode
     initializeDarkMode();
     
+    // Clear winner popup session storage on page load (optional - remove this line if you want popups to persist across page refreshes)
+    // sessionStorage.removeItem('shownWinnerPopups');
+    
     // Load all data first
     await loadDopingUsage();
     await loadPlayers();
@@ -73,7 +76,26 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Test winner popup (for debugging)
     window.testWinnerPopup = function() {
-        showWinnerPopup('Cynthia', 'Groene Trui', 72);
+        showWinnerPopup('Cynthia', 'Groene Trui', 72, 1);
+    };
+    
+    // Test all jersey popups (for debugging)
+    window.testAllPopups = function() {
+        showWinnerPopup('Alice', 'Gele Trui', 85, 1);
+        setTimeout(() => showWinnerPopup('Bob', 'Groene Trui', 72, 2), 2000);
+        setTimeout(() => showWinnerPopup('Charlie', 'Bolletjestrui', 68, 3), 4000);
+        setTimeout(() => showWinnerPopup('Diana', 'Witte Trui', 91, 4), 6000);
+    };
+    
+    // Force check for new winners (for debugging)
+    window.forceCheckWinners = async function() {
+        await loadRankings();
+    };
+    
+    // Clear popup session storage (for debugging)
+    window.clearPopupSession = function() {
+        sessionStorage.removeItem('shownWinnerPopups');
+        console.log('Popup session storage cleared');
     };
 });
 
@@ -129,22 +151,36 @@ function checkForNewWinners(rankings) {
         'witte_trui': 'Witte Trui'
     };
     
+    // Get shown popups from session storage
+    const shownPopups = JSON.parse(sessionStorage.getItem('shownWinnerPopups') || '{}');
+    
     Object.keys(jerseyTypes).forEach(jerseyKey => {
         if (rankings[jerseyKey] && rankings[jerseyKey].length > 0) {
             const currentWinner = rankings[jerseyKey][0];
             const previousWinner = previousWinners[jerseyKey];
             
-            // Check if there's a new winner (only show popup if we had a previous winner)
-            if (previousWinner && previousWinner.playerId !== currentWinner[0]) {
+            // Create a unique key for this winner
+            const popupKey = `${jerseyKey}_${currentWinner[0]}_${currentWinner[1].points}`;
+            
+            // Show popup if:
+            // 1. There's no previous winner (first time this jersey has a winner)
+            // 2. There's a different winner than before
+            // 3. This specific popup hasn't been shown before in this session
+            if ((!previousWinner || previousWinner.playerId !== currentWinner[0]) && !shownPopups[popupKey]) {
                 const playerName = currentWinner[1].name;
                 const jerseyName = jerseyTypes[jerseyKey];
                 const points = currentWinner[1].points;
+                const playerId = currentWinner[0];
                 
                 // Show popup for new winner
-                showWinnerPopup(playerName, jerseyName, points);
+                showWinnerPopup(playerName, jerseyName, points, playerId);
+                
+                // Mark this popup as shown
+                shownPopups[popupKey] = true;
+                sessionStorage.setItem('shownWinnerPopups', JSON.stringify(shownPopups));
             }
             
-            // Always update previous winner (even on initial load)
+            // Always update previous winner
             previousWinners[jerseyKey] = {
                 playerId: currentWinner[0],
                 playerName: currentWinner[1].name,
@@ -155,19 +191,58 @@ function checkForNewWinners(rankings) {
 }
 
 // Show winner popup
-function showWinnerPopup(playerName, jerseyName, points) {
-    // Create popup HTML
+function showWinnerPopup(playerName, jerseyName, points, playerId) {
+    // Get player picture
+    const player = players.find(p => p.id === playerId);
+    const playerPictureUrl = player && player.picture ? `/player_picture/${player.picture}` : '/static/player_pictures/player_1.png';
+    
+    // Get jersey image based on jersey name
+    let jerseyImageUrl = '/static/witte trui.png'; // default
+    if (jerseyName === 'Gele Trui') {
+        jerseyImageUrl = '/static/gele trui.png';
+    } else if (jerseyName === 'Groene Trui') {
+        jerseyImageUrl = '/static/groene trui.png';
+    } else if (jerseyName === 'Bolletjestrui') {
+        jerseyImageUrl = '/static/bolletjes trui.png';
+    } else if (jerseyName === 'Witte Trui') {
+        jerseyImageUrl = '/static/witte trui.png';
+    }
+    
+    // Create popup HTML with enhanced design
     const popupHTML = `
-        <div id="winnerPopup" class="modal-backdrop">
+        <div id="winnerPopup" class="modal-backdrop winner-popup-backdrop">
             <div class="modal winner-modal">
                 <div class="winner-content">
-                    <h2>🎉 Nieuwe Winnaar! 🎉</h2>
-                    <div class="winner-info">
-                        <p><strong>${playerName}</strong> heeft de <strong>${jerseyName}</strong> gewonnen!</p>
-                        <p class="winner-points">Met ${points} punten</p>
+                    <div class="winner-header">
+                        <h2>🎉 Nieuwe Winnaar! 🎉</h2>
+                        <button id="winnerPopupClose" class="winner-close-btn">&times;</button>
                     </div>
-                    <div class="modal-actions">
-                        <button id="winnerPopupClose" class="btn btn-primary">Gefeliciteerd!</button>
+                    
+                    <div class="winner-body">
+                        <div class="jersey-section">
+                            <img src="${jerseyImageUrl}" alt="${jerseyName}" class="jersey-image">
+                            <h3 class="jersey-name">${jerseyName}</h3>
+                        </div>
+                        
+                        <div class="winner-section">
+                            <div class="winner-picture-container">
+                                <img src="${playerPictureUrl}" alt="${playerName}" class="winner-picture">
+                            </div>
+                            <div class="winner-details">
+                                <h3 class="winner-name">${playerName}</h3>
+                                <p class="winner-number">#${player ? player.number : '?'}</p>
+                                <div class="winner-score">
+                                    <span class="score-label">Score:</span>
+                                    <span class="score-value">${points} punten</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="winner-footer">
+                        <button id="winnerPopupCloseBtn" class="btn btn-primary winner-close-button">
+                            Gefeliciteerd! 🎊
+                        </button>
                     </div>
                 </div>
             </div>
@@ -177,21 +252,36 @@ function showWinnerPopup(playerName, jerseyName, points) {
     // Add popup to page
     document.body.insertAdjacentHTML('beforeend', popupHTML);
     
-    // Add event listener to close button
-    document.getElementById('winnerPopupClose').addEventListener('click', () => {
+    // Add event listeners to close buttons
+    const closePopup = () => {
         const popup = document.getElementById('winnerPopup');
         if (popup) {
-            popup.remove();
+            popup.classList.add('fade-out');
+            setTimeout(() => {
+                if (popup.parentNode) {
+                    popup.remove();
+                }
+            }, 300);
+        }
+    };
+    
+    document.getElementById('winnerPopupClose').addEventListener('click', closePopup);
+    document.getElementById('winnerPopupCloseBtn').addEventListener('click', closePopup);
+    
+    // Close on backdrop click
+    document.getElementById('winnerPopup').addEventListener('click', (e) => {
+        if (e.target.id === 'winnerPopup') {
+            closePopup();
         }
     });
     
-    // Auto-close after 5 seconds
+    // Auto-close after 8 seconds
     setTimeout(() => {
         const popup = document.getElementById('winnerPopup');
         if (popup) {
-            popup.remove();
+            closePopup();
         }
-    }, 5000);
+    }, 8000);
 }
 
 async function loadDopingUsage() {
