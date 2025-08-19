@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ronde van Brakel</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1 class="title">Ronde van Brakel</h1>
+            <p class="subtitle">De wielerklassieker van de spellen</p>
+        </div>
+    </header>
+
+    <nav class="navigation">
+        <div class="container">
+            <ul class="nav-list">
+                <li><a href="#score" class="nav-link">Scores</a></li>
+                <li><a href="#rankings" class="nav-link">Klassementen</a></li>
+                <li><a href="#opponents" class="nav-link">Tegenstanders</a></li>
+                <li><a href="#rules" class="nav-link">Spelregels</a></li>
+                <li><a href="#registration" class="nav-link">Registratie</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="container">
+            <!-- Score Section (first) -->
+            <section id="score" class="section">
+                <h2>Scores Invoeren</h2>
+                <div class="score-entry">
+                    <div class="form-group">
+                        <label for="gameSelect">Spel:</label>
+                        <select id="gameSelect">
+                            <option value="">Selecteer een spel</option>
+                            <option value="touwspringen">Touwspringen</option>
+                            <option value="stoelendans">Stoelendans</option>
+                            <option value="petanque">Petanque</option>
+                            <option value="kubb">Kubb</option>
+                            <option value="rebus">Rebus</option>
+                            <option value="wiskunde">Wiskunde</option>
+                        </select>
+                    </div>
+                    <div id="dynamicFields"></div>
+                    <button id="submitScore" class="btn btn-secondary">Score Invoeren</button>
+                </div>
+            </section>
+
+            <!-- Opponents Section -->
+            <section id="opponents" class="section">
+                <h2>Tegenstanders</h2>
+                <div style="text-align: center; margin-bottom: 1rem;">
+                    <button id="regenerateOpponents" class="btn btn-primary">Nieuwe Tegenstanders Genereren</button>
+                </div>
+                <div class="opponents-grid" id="opponentsGrid">
+                    <!-- Opponents will be generated here -->
+                </div>
+            </section>
+
+            <!-- Rankings Section -->
+            <section id="rankings" class="section">
+                <h2>Klassementen</h2>
+                
+                <div class="rankings-container">
+                    <!-- Gele Trui - Overall Winner -->
+                    <div class="ranking-card">
+                        <div class="ranking-header gele-trui">
+                            <h3>Gele Trui</h3>
+                            <p>Algemeen Klassement</p>
+                        </div>
+                        <div class="ranking-list" id="geleTruiRanking">
+                            <!-- Rankings will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Groene Trui - Speed Games -->
+                    <div class="ranking-card">
+                        <div class="ranking-header groene-trui">
+                            <h3>Groene Trui</h3>
+                            <p>Snelheid (Touwspringen & Stoelendans)</p>
+                        </div>
+                        <div class="ranking-list" id="groeneTruiRanking">
+                            <!-- Rankings will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Bolletjestrui - Ball Games -->
+                    <div class="ranking-card">
+                        <div class="ranking-header bolletjes-trui">
+                            <h3>Bolletjestrui</h3>
+                            <p>Bal Spellen (Petanque & Kubb)</p>
+                        </div>
+                        <div class="ranking-list" id="bolletjesTruiRanking">
+                            <!-- Rankings will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Witte Trui - Brain Games -->
+                    <div class="ranking-card">
+                        <div class="ranking-header witte-trui">
+                            <h3>Witte Trui</h3>
+                            <p>Hersenspellen (Rebus & Wiskunde)</p>
+                        </div>
+                        <div class="ranking-list" id="witteTruiRanking">
+                            <!-- Rankings will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Rules Section -->
+            <section id="rules" class="section">
+                <h2>Spelregels</h2>
+                <div class="rules-container">
+                    <div class="rule-card">
+                        <h3>dOPING</h3>
+                        <p>Je kan voor een spel doping gebruiken. Dit zorgt ervoor dat je punten verdubbelt.</p>
+                    </div><div class="rule-card">
+                        <h3>Touwspringen</h3>
+                        <p>Spring zo lang mogelijk met het touw. De speler die het langst kan springen wint.</p>
+                        <div class="scoring">
+                            <strong>Punten:</strong> 25-22-19-15-12-8-7-6-5-4-3-2-1-0-0-0
+                        </div>
+                    </div>
+
+                    <div class="rule-card">
+                        <h3>Stoelendans</h3>
+                        <p>Doe mee aan de stoelendans. De laatste speler die overblijft wint.</p>
+                        <div class="scoring">
+                            <strong>Punten:</strong> 25-22-19-15-12-8-7-6-5-4-3-2-1-0-0-0
+                        </div>
+                    </div>
+
+                    <div class="rule-card">
+                        <h3>Petanque</h3>
+                        <p>Gooi de 3 ballen zo dicht mogelijk bij het kleine houten balletje (cochonnet). Degene die het dichtste is bij de cochonnet wint</p>
+                        <div class="scoring">
+                            <strong>Punten:</strong> Winnaar:25, verliezend finalist: 22, verliezend halve finale: 15, verliezend kwartfinale: 8, verliezer 1/16 4, rest 0.
+                        </div>
+                    </div>
+
+                    <div class="rule-card">
+                        <h3>Kubb</h3>
+                        <p>Gooi houten stokken om de 2 houten blokken (kubbs) van de tegenstander omver. De speler die het meeste blokken om ver gooit wint, bij ex aequo wordt er gesmeten naar de koning.</
+                            p>
+                        <div class="scoring">
+                            <strong>Punten:</strong> Winnaar:25, verliezend finalist: 22, verliezend halve finale: 15, verliezend kwartfinale: 8, verliezer 1/16 4, rest 0.
+                        </div>
+                    </div>
+
+                    <div class="rule-card">
+                        <h3>Rebus</h3>
+                        <p>Los de rebus op door de afbeeldingen en woorden te combineren tot een antwoord.</p>
+                        <div class="scoring">
+                            <strong>Punten:</strong> 25-22-19-15-12-8-7-6-5-4-3-2-1-0-0-0
+                        </div>
+                    </div>
+
+                    <div class="rule-card">
+                        <h3>Wiskunde</h3>
+                        <p>Los wiskundige puzzels op. Snelheid en nauwkeurigheid zijn belangrijk.</p>
+                        <div class="scoring">
+                            <strong>Punten:</strong> 25-22-19-15-12-8-7-6-5-4-3-2-1-0-0-0
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Registration Section (last) -->
+            <section id="registration" class="section">
+                <h2>Speler Registratie</h2>
+                <div class="photo-strip">
+                    <img src="static/vive-2.jpeg" alt="Vive le Velo 2">
+                </div>
+                <div class="registration-form">
+                    <div class="form-group">
+                        <label for="playerName">Naam:</label>
+                        <input type="text" id="playerName" placeholder="Vul je naam in">
+                    </div>
+                    <div class="form-group">
+                        <label for="playerNumber">Startnummer:</label>
+                        <input type="number" id="playerNumber" placeholder="Startnummer">
+                    </div>
+                    <button id="registerPlayer" class="btn btn-primary">Registreer</button>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Ronde van Brakel - De wielerklassieker van de spellen</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html> 
