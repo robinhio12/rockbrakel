@@ -840,6 +840,57 @@ body {
     padding: 2rem;
 }
 
+/* Winner Popup Styles */
+.winner-modal .winner-content {
+    text-align: center;
+    padding: 2rem;
+}
+
+.winner-modal .winner-content h2 {
+    color: #2c3e50;
+    margin-bottom: 1.5rem;
+    font-size: 1.8rem;
+}
+
+.winner-modal .winner-info {
+    margin-bottom: 2rem;
+}
+
+.winner-modal .winner-info p {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    color: #333;
+}
+
+.winner-modal .winner-points {
+    font-size: 1.4rem !important;
+    font-weight: bold;
+    color: #e74c3c !important;
+    margin-top: 1rem !important;
+}
+
+.winner-modal .modal-actions {
+    justify-content: center;
+}
+
+.winner-modal .btn-primary {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.winner-modal .btn-primary:hover {
+    background: linear-gradient(135deg, #2980b9, #1f5f8b);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+}
+
 /* Background Timer Styles */
 .background-timer {
     position: fixed;

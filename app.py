@@ -127,7 +127,9 @@ def load_data():
     # Load doping usage data
     if os.path.exists('data/doping_usage.json'):
         with open('data/doping_usage.json', 'r', encoding='utf-8') as f:
-            doping_usage = json.load(f)
+            doping_usage_raw = json.load(f)
+            # Convert string keys to integers
+            doping_usage = {int(k): v for k, v in doping_usage_raw.items()}
 
 def save_data():
     """Save data to JSON files"""
@@ -557,13 +559,18 @@ def advance_tournament(game, match_id, winner_id, loser_id, doping1=False, dopin
         return False
     
     # Track doping usage (can only be used once across all games)
+    # For tournaments, doping can only be used in round 1
     if doping1:
         if winner_id in doping_usage:
             return False  # Player already used doping
+        if current_round > 0:
+            return False  # Doping can only be used in round 1
         doping_usage[winner_id] = game
     if doping2:
         if loser_id in doping_usage:
             return False  # Player already used doping
+        if current_round > 0:
+            return False  # Doping can only be used in round 1
         doping_usage[loser_id] = game
     
     # Check if current round is complete
@@ -1102,6 +1109,9 @@ def submit_tournament_match():
             return jsonify({'success': False, 'doping_error': True, 'message': f'Speler heeft al doping gebruikt voor {doping_usage[int(winner_id)]}'}), 200
         if doping2 and int(loser_id) in doping_usage and doping_usage[int(loser_id)] != game:
             return jsonify({'success': False, 'doping_error': True, 'message': f'Speler heeft al doping gebruikt voor {doping_usage[int(loser_id)]}'}), 200
+        # Check if it failed due to doping in wrong round
+        if (doping1 or doping2) and game in tournaments and tournaments[game]['current_round'] > 0:
+            return jsonify({'success': False, 'doping_error': True, 'message': 'Doping kan alleen in ronde 1 gebruikt worden'}), 200
         return jsonify({'success': False, 'message': 'Fout bij opslaan wedstrijd'}), 500
 
 @app.route('/get_tournament_matches/<game>')

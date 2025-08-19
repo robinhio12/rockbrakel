@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Doping Restriction</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .checkbox-label {
+            display: block;
+            margin: 10px 0;
+        }
+        .checkbox-label input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        .checkbox-label.disabled {
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Doping Restriction voor Toernooien</h1>
+    
+    <div class="test-section info">
+        <h2>Huidige Status</h2>
+        <p><strong>Petanque Toernooi:</strong> Ronde 3 (doping alleen toegestaan in ronde 1)</p>
+        <p><strong>Kubb Toernooi:</strong> Ronde 3 (doping alleen toegestaan in ronde 1)</p>
+        <p><strong>Doping Gebruik:</strong></p>
+        <ul>
+            <li>Speler 3: touwspringen</li>
+            <li>Speler 1: stoelendans</li>
+            <li>Speler 11: petanque</li>
+            <li>Speler 5: petanque</li>
+            <li>Speler 7: petanque</li>
+            <li>Speler 13: petanque</li>
+            <li>Speler 4: petanque</li>
+            <li>Speler 2: kubb</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 1: Doping in Ronde 3 (Niet Toegestaan)</h2>
+        <p>Probeer doping te gebruiken in een toernooi dat al in ronde 3 is:</p>
+        
+        <div class="checkbox-label disabled">
+            <input type="checkbox" id="testDoping1" disabled>
+            <label for="testDoping1">Doping Speler 1 (Uitgeschakeld - niet in ronde 1)</label>
+        </div>
+        
+        <div class="checkbox-label disabled">
+            <input type="checkbox" id="testDoping2" disabled>
+            <label for="testDoping2">Doping Speler 2 (Uitgeschakeld - niet in ronde 1)</label>
+        </div>
+        
+        <p><em>Resultaat: Doping checkboxes zijn uitgeschakeld met de melding "Doping kan alleen in ronde 1 gebruikt worden"</em></p>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Spelers die Al Doping Hebben Gebruikt</h2>
+        <p>Spelers die al doping hebben gebruikt voor een ander spel:</p>
+        
+        <div class="checkbox-label disabled">
+            <input type="checkbox" id="testDoping3" disabled>
+            <label for="testDoping3">Speler 3 (Uitgeschakeld - al gebruikt voor touwspringen)</label>
+        </div>
+        
+        <div class="checkbox-label disabled">
+            <input type="checkbox" id="testDoping4" disabled>
+            <label for="testDoping4">Speler 1 (Uitgeschakeld - al gebruikt voor stoelendans)</label>
+        </div>
+        
+        <p><em>Resultaat: Doping checkboxes zijn uitgeschakeld met de melding "Doping al gebruikt voor [spel]"</em></p>
+    </div>
+
+    <div class="test-section success">
+        <h2>Implementatie Details</h2>
+        <h3>Frontend Wijzigingen:</h3>
+        <ul>
+            <li><strong>static/script.js:</strong> Toegevoegd controle voor huidige ronde in tournament doping logic</li>
+            <li><strong>static/script.js:</strong> Doping checkboxes worden uitgeschakeld als niet in ronde 1</li>
+            <li><strong>static/script.js:</strong> Dynamische waarschuwingstekst die verandert op basis van ronde</li>
+        </ul>
+        
+        <h3>Backend Wijzigingen:</h3>
+        <ul>
+            <li><strong>app.py:</strong> Toegevoegd controle in advance_tournament() functie</li>
+            <li><strong>app.py:</strong> Doping wordt geweigerd als current_round > 0</li>
+            <li><strong>app.py:</strong> Specifieke foutmelding voor doping in verkeerde ronde</li>
+        </ul>
+        
+        <h3>Gebruikerservaring:</h3>
+        <ul>
+            <li>Doping checkboxes zijn visueel uitgeschakeld (grijze kleur)</li>
+            <li>Tooltip toont reden waarom doping niet beschikbaar is</li>
+            <li>Waarschuwingstekst verandert van blauw naar rood voor latere rondes</li>
+            <li>Backend geeft duidelijke foutmelding als iemand probeert te omzeilen</li>
+        </ul>
+    </div>
+
+    <div class="test-section warning">
+        <h2>Hoe te Testen</h2>
+        <ol>
+            <li>Ga naar de hoofdpagina: <a href="http://localhost:5000" target="_blank">http://localhost:5000</a></li>
+            <li>Selecteer "Petanque" of "Kubb" in het spel dropdown</li>
+            <li>Kijk naar de doping checkboxes - ze zouden uitgeschakeld moeten zijn</li>
+            <li>Hover over de uitgeschakelde checkboxes om de tooltip te zien</li>
+            <li>Kijk naar de waarschuwingstekst onder de checkboxes</li>
+        </ol>
+    </div>
+
+    <script>
+        // Simulate the doping restriction logic
+        document.addEventListener('DOMContentLoaded', function() {
+            // Simulate current round check
+            const currentRound = 3; // Both tournaments are in round 3
+            const isRound1 = currentRound === 0;
+            
+            // Simulate doping usage
+            const dopingUsage = {
+                3: "touwspringen",
+                1: "stoelendans",
+                11: "petanque",
+                5: "petanque",
+                7: "petanque",
+                13: "petanque",
+                4: "petanque",
+                2: "kubb"
+            };
+            
+            // Update test checkboxes to show the restriction
+            const testCheckboxes = document.querySelectorAll('#testDoping1, #testDoping2');
+            testCheckboxes.forEach(checkbox => {
+                const label = checkbox.parentElement;
+                label.title = 'Doping kan alleen in ronde 1 gebruikt worden';
+            });
+            
+            // Update checkboxes for players who already used doping
+            const testCheckbox3 = document.getElementById('testDoping3');
+            const testCheckbox4 = document.getElementById('testDoping4');
+            
+            testCheckbox3.parentElement.title = `Doping al gebruikt voor ${dopingUsage[3]}`;
+            testCheckbox4.parentElement.title = `Doping al gebruikt voor ${dopingUsage[1]}`;
+        });
+    </script>
+</body>
+</html>

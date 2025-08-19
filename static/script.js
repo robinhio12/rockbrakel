@@ -6,6 +6,7 @@ let shown = false;
 let gameStartTime = null;
 let gameTimer = null;
 let countdownTimer = null;
+let previousWinners = {}; // Track previous winners for popup notifications
 
 // DOM elements
 const playerNameInput = document.getElementById('playerName');
@@ -69,6 +70,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (darkModeToggle) {
         darkModeToggle.addEventListener('click', toggleDarkMode);
     }
+    
+    // Test winner popup (for debugging)
+    window.testWinnerPopup = function() {
+        showWinnerPopup('Cynthia', 'Groene Trui', 72);
+    };
 });
 
 // Load players from the server
@@ -100,6 +106,10 @@ async function loadRankings() {
     try {
         const response = await fetch('/get_rankings');
         const rankings = await response.json();
+        
+        // Check for new winners and show popups
+        checkForNewWinners(rankings);
+        
         displayRankings(rankings);
     } catch (error) {
         console.error('Error loading rankings:', error);
@@ -109,6 +119,80 @@ async function loadRankings() {
 
 // Load doping usage data
 let dopingUsage = {};
+
+// Check for new winners and show popups
+function checkForNewWinners(rankings) {
+    const jerseyTypes = {
+        'gele_trui': 'Gele Trui',
+        'groene_trui': 'Groene Trui', 
+        'bolletjes_trui': 'Bolletjestrui',
+        'witte_trui': 'Witte Trui'
+    };
+    
+    Object.keys(jerseyTypes).forEach(jerseyKey => {
+        if (rankings[jerseyKey] && rankings[jerseyKey].length > 0) {
+            const currentWinner = rankings[jerseyKey][0];
+            const previousWinner = previousWinners[jerseyKey];
+            
+            // Check if there's a new winner (only show popup if we had a previous winner)
+            if (previousWinner && previousWinner.playerId !== currentWinner[0]) {
+                const playerName = currentWinner[1].name;
+                const jerseyName = jerseyTypes[jerseyKey];
+                const points = currentWinner[1].points;
+                
+                // Show popup for new winner
+                showWinnerPopup(playerName, jerseyName, points);
+            }
+            
+            // Always update previous winner (even on initial load)
+            previousWinners[jerseyKey] = {
+                playerId: currentWinner[0],
+                playerName: currentWinner[1].name,
+                points: currentWinner[1].points
+            };
+        }
+    });
+}
+
+// Show winner popup
+function showWinnerPopup(playerName, jerseyName, points) {
+    // Create popup HTML
+    const popupHTML = `
+        <div id="winnerPopup" class="modal-backdrop">
+            <div class="modal winner-modal">
+                <div class="winner-content">
+                    <h2>🎉 Nieuwe Winnaar! 🎉</h2>
+                    <div class="winner-info">
+                        <p><strong>${playerName}</strong> heeft de <strong>${jerseyName}</strong> gewonnen!</p>
+                        <p class="winner-points">Met ${points} punten</p>
+                    </div>
+                    <div class="modal-actions">
+                        <button id="winnerPopupClose" class="btn btn-primary">Gefeliciteerd!</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add popup to page
+    document.body.insertAdjacentHTML('beforeend', popupHTML);
+    
+    // Add event listener to close button
+    document.getElementById('winnerPopupClose').addEventListener('click', () => {
+        const popup = document.getElementById('winnerPopup');
+        if (popup) {
+            popup.remove();
+        }
+    });
+    
+    // Auto-close after 5 seconds
+    setTimeout(() => {
+        const popup = document.getElementById('winnerPopup');
+        if (popup) {
+            popup.remove();
+        }
+    }, 5000);
+}
 
 async function loadDopingUsage() {
     try {
@@ -183,6 +267,10 @@ function initializeDopingCheckboxes(game) {
                         if (selectedMatch) {
                             const player1Id = selectedMatch.player1.id;
                             const player2Id = selectedMatch.player2 ? selectedMatch.player2.id : null;
+                            const currentRound = tournament.current_round;
+                            
+                            // Check if this is round 1 (doping only allowed in round 1)
+                            const isRound1 = currentRound === 0;
                             
                             // Check doping usage for player 1
                             if (player1Id in dopingUsage) {
@@ -190,6 +278,12 @@ function initializeDopingCheckboxes(game) {
                                 doping1Checkbox.checked = false;
                                 doping1Checkbox.parentElement.style.opacity = '0.5';
                                 doping1Checkbox.parentElement.title = `Doping al gebruikt voor ${dopingUsage[player1Id]}`;
+                            } else if (!isRound1) {
+                                // Disable doping if not in round 1
+                                doping1Checkbox.disabled = true;
+                                doping1Checkbox.checked = false;
+                                doping1Checkbox.parentElement.style.opacity = '0.5';
+                                doping1Checkbox.parentElement.title = 'Doping kan alleen in ronde 1 gebruikt worden';
                             } else {
                                 doping1Checkbox.disabled = false;
                                 doping1Checkbox.checked = false;
@@ -203,6 +297,12 @@ function initializeDopingCheckboxes(game) {
                                 doping2Checkbox.checked = false;
                                 doping2Checkbox.parentElement.style.opacity = '0.5';
                                 doping2Checkbox.parentElement.title = `Doping al gebruikt voor ${dopingUsage[player2Id]}`;
+                            } else if (player2Id && !isRound1) {
+                                // Disable doping if not in round 1
+                                doping2Checkbox.disabled = true;
+                                doping2Checkbox.checked = false;
+                                doping2Checkbox.parentElement.style.opacity = '0.5';
+                                doping2Checkbox.parentElement.title = 'Doping kan alleen in ronde 1 gebruikt worden';
                             } else if (player2Id) {
                                 doping2Checkbox.disabled = false;
                                 doping2Checkbox.checked = false;
@@ -1144,6 +1244,10 @@ async function renderTournamentFields(game) {
             return `<option value="${idx}">Wedstrijd ${idx + 1}: ${p1Name} vs ${p2Name}</option>`;
         }).join('');
         
+        const dopingWarning = currentRound === 0 ? 
+            '<small class="doping-warning">Let op: Doping kan maar één keer gebruikt worden over alle spellen!</small>' :
+            '<small class="doping-warning" style="color: #e74c3c;">Doping kan alleen in ronde 1 gebruikt worden!</small>';
+            
         dynamicFields.innerHTML = `
             <div class="form-group">
                 <label>Wedstrijd (Ronde ${currentRound + 1})</label>
@@ -1154,14 +1258,14 @@ async function renderTournamentFields(game) {
                 <label class="checkbox-label">
                     <input type="checkbox" id="doping1"> Doping gebruiken (verdubbelt punten)
                 </label>
-                <small class="doping-warning">Let op: Doping kan maar één keer gebruikt worden over alle spellen!</small>
+                ${dopingWarning}
             </div>
             <div class="form-group">
                 <label>Doping Speler 2</label>
                 <label class="checkbox-label">
                     <input type="checkbox" id="doping2"> Doping gebruiken (verdubbelt punten)
                 </label>
-                <small class="doping-warning">Let op: Doping kan maar één keer gebruikt worden over alle spellen!</small>
+                ${dopingWarning}
             </div>
             <div class="form-group">
                 <label>Winnaar</label>
@@ -1413,7 +1517,7 @@ async function submitScore() {
                 }
             });
             
-            payload.ranking = ranking;
+            payload.ordering = ranking;
             payload.doping = dopingPlayers.length > 0;
             payload.doping_players = dopingPlayers;
         } else if (game === 'petanque' || game === 'kubb') {
