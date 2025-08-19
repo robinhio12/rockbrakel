@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Load all data first
     await loadDopingUsage();
     await loadPlayers();
+    await loadScores();
     await loadOpponents();
     await loadRankings();
     
@@ -97,6 +98,33 @@ document.addEventListener('DOMContentLoaded', async function() {
         sessionStorage.removeItem('shownWinnerPopups');
         console.log('Popup session storage cleared');
     };
+    
+    // Test score checking (for debugging)
+    window.testScoreChecking = function() {
+        console.log('Testing score checking...');
+        console.log('Players:', players);
+        console.log('Scores:', scores);
+        console.log('Opponents:', opponents);
+        
+        const jerseyGames = {
+            'gele_trui': ['touwspringen', 'stoelendans', 'petanque', 'kubb', 'rebus', 'wiskunde'],
+            'groene_trui': ['touwspringen', 'stoelendans'],
+            'bolletjes_trui': ['petanque', 'kubb'],
+            'witte_trui': ['rebus', 'wiskunde']
+        };
+        
+        Object.keys(jerseyGames).forEach(jersey => {
+            const games = jerseyGames[jersey];
+            const allEntered = checkAllScoresEntered(games);
+            console.log(`${jersey}: All scores entered = ${allEntered}`);
+        });
+    };
+    
+    // Test close button functionality (for debugging)
+    window.testCloseButton = function() {
+        showWinnerPopup('Test Player', 'Gele Trui', 85, 1);
+        console.log('Test popup shown. Try clicking the close buttons or backdrop.');
+    };
 });
 
 // Load players from the server
@@ -108,6 +136,18 @@ async function loadPlayers() {
     } catch (error) {
         console.error('Error loading players:', error);
         showMessage('Fout bij het laden van spelers', 'error');
+    }
+}
+
+// Load scores from the server
+async function loadScores() {
+    try {
+        const response = await fetch('/get_scores');
+        scores = await response.json();
+        console.log('Loaded scores:', scores);
+    } catch (error) {
+        console.error('Error loading scores:', error);
+        showMessage('Fout bij het laden van scores', 'error');
     }
 }
 
@@ -128,6 +168,9 @@ async function loadRankings() {
     try {
         const response = await fetch('/get_rankings');
         const rankings = await response.json();
+        
+        // Reload scores to ensure we have the latest data for popup checking
+        await loadScores();
         
         // Check for new winners and show popups
         checkForNewWinners(rankings);
@@ -151,6 +194,14 @@ function checkForNewWinners(rankings) {
         'witte_trui': 'Witte Trui'
     };
     
+    // Define which games contribute to each jersey
+    const jerseyGames = {
+        'gele_trui': ['touwspringen', 'stoelendans', 'petanque', 'kubb', 'rebus', 'wiskunde'], // All games
+        'groene_trui': ['touwspringen', 'stoelendans'], // Speed games
+        'bolletjes_trui': ['petanque', 'kubb'], // Ball games
+        'witte_trui': ['rebus', 'wiskunde'] // Brain games
+    };
+    
     // Get shown popups from session storage
     const shownPopups = JSON.parse(sessionStorage.getItem('shownWinnerPopups') || '{}');
     
@@ -162,11 +213,19 @@ function checkForNewWinners(rankings) {
             // Create a unique key for this winner
             const popupKey = `${jerseyKey}_${currentWinner[0]}_${currentWinner[1].points}`;
             
+            // Check if all players have entered scores for the games that contribute to this jersey
+            const gamesForJersey = jerseyGames[jerseyKey];
+            const allScoresEntered = checkAllScoresEntered(gamesForJersey);
+            
             // Show popup if:
             // 1. There's no previous winner (first time this jersey has a winner)
             // 2. There's a different winner than before
             // 3. This specific popup hasn't been shown before in this session
-            if ((!previousWinner || previousWinner.playerId !== currentWinner[0]) && !shownPopups[popupKey]) {
+            // 4. All players have entered their scores for the games contributing to this jersey
+            if ((!previousWinner || previousWinner.playerId !== currentWinner[0]) && 
+                !shownPopups[popupKey] && 
+                allScoresEntered) {
+                
                 const playerName = currentWinner[1].name;
                 const jerseyName = jerseyTypes[jerseyKey];
                 const points = currentWinner[1].points;
@@ -188,6 +247,59 @@ function checkForNewWinners(rankings) {
             };
         }
     });
+}
+
+// Check if all players have entered scores for the specified games
+function checkAllScoresEntered(games) {
+    if (!players || players.length === 0) {
+        return false;
+    }
+    
+    for (const game of games) {
+        if (game === 'stoelendans') {
+            // For stoelendans, check if the ordering is complete (should include all players)
+            if (!scores[game] || !Array.isArray(scores[game]) || scores[game].length === 0) {
+                return false;
+            }
+            // Check if all players are in the ordering
+            const playerIds = players.map(p => p.id);
+            const orderingIds = scores[game].map(p => parseInt(p));
+            const allPlayersIncluded = playerIds.every(id => orderingIds.includes(id));
+            if (!allPlayersIncluded) {
+                return false;
+            }
+        } else if (game === 'petanque' || game === 'kubb') {
+            // For tournament games, check if tournament is complete
+            if (!scores[game] || !Array.isArray(scores[game]) || scores[game].length === 0) {
+                return false;
+            }
+            // Check if tournament has final standings
+            if (!opponents[game] || !Array.isArray(opponents[game])) {
+                return false;
+            }
+            // For now, assume tournament is complete if there are any results
+            // This could be enhanced to check actual tournament completion
+        } else {
+            // For individual games (touwspringen, rebus, wiskunde), check if all players have scores
+            if (!scores[game] || typeof scores[game] !== 'object') {
+                return false;
+            }
+            
+            const playerIds = players.map(p => p.id);
+            const scoreKeys = Object.keys(scores[game]);
+            
+            // Check if all players have scores (accounting for string vs number keys)
+            const allPlayersHaveScores = playerIds.every(id => 
+                scoreKeys.includes(id.toString()) || scoreKeys.includes(id)
+            );
+            
+            if (!allPlayersHaveScores) {
+                return false;
+            }
+        }
+    }
+    
+    return true;
 }
 
 // Show winner popup
@@ -258,22 +370,43 @@ function showWinnerPopup(playerName, jerseyName, points, playerId) {
         if (popup) {
             popup.classList.add('fade-out');
             setTimeout(() => {
-                if (popup.parentNode) {
+                if (popup && popup.parentNode) {
                     popup.remove();
                 }
             }, 300);
         }
     };
     
-    document.getElementById('winnerPopupClose').addEventListener('click', closePopup);
-    document.getElementById('winnerPopupCloseBtn').addEventListener('click', closePopup);
-    
-    // Close on backdrop click
-    document.getElementById('winnerPopup').addEventListener('click', (e) => {
-        if (e.target.id === 'winnerPopup') {
-            closePopup();
+    // Wait a moment for DOM to be ready, then add event listeners
+    setTimeout(() => {
+        const closeBtn = document.getElementById('winnerPopupClose');
+        const closeBtn2 = document.getElementById('winnerPopupCloseBtn');
+        const popup = document.getElementById('winnerPopup');
+        
+        if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closePopup();
+            });
         }
-    });
+        
+        if (closeBtn2) {
+            closeBtn2.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closePopup();
+            });
+        }
+        
+        if (popup) {
+            popup.addEventListener('click', (e) => {
+                if (e.target.id === 'winnerPopup') {
+                    closePopup();
+                }
+            });
+        }
+    }, 100);
     
     // Auto-close after 8 seconds
     setTimeout(() => {

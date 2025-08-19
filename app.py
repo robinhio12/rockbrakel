@@ -1032,6 +1032,12 @@ def get_players():
     load_data()
     return jsonify(players)
 
+@app.route('/get_scores')
+def get_scores():
+    """Get all scores data"""
+    load_data()
+    return jsonify(scores)
+
 @app.route('/regenerate_opponents', methods=['POST'])
 def regenerate_opponents():
     """Regenerate opponent pairs for all games"""
