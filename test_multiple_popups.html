@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiple Winner Popups Test</title>
+    <link rel="stylesheet" href="static/styles.css">
+    <style>
+        body {
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-btn {
+            padding: 10px 20px;
+            background: #ff6b35;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-btn:hover {
+            background: #e55a2b;
+        }
+        .debug-info {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Multiple Winner Popups Test</h1>
+    
+    <div class="test-section">
+        <h3>Test Multiple Popup Functionality</h3>
+        <button class="test-btn" onclick="testMultiplePopups()">Test Multiple Popups Simultaneously</button>
+        <button class="test-btn" onclick="testSequentialPopups()">Test Sequential Popups</button>
+        <button class="test-btn" onclick="clearAllPopups()">Clear All Popups</button>
+        <button class="test-btn" onclick="checkPopupStatus()">Check Popup Status</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>Debug Information</h3>
+        <div id="debugInfo" class="debug-info">Click "Check Popup Status" to see debug information</div>
+    </div>
+
+    <script>
+        // Mock the necessary functions and data for testing
+        let players = [];
+        let openWinnerPopups = new Set(); // Track which jersey popups are currently open
+        
+        // Load data from the server
+        async function loadData() {
+            try {
+                const response = await fetch('/get_players');
+                players = await response.json();
+                console.log('Loaded players:', players);
+            } catch (error) {
+                console.error('Error loading players:', error);
+                // Use mock data if server is not available
+                players = [
+                    { id: 1, name: 'Alice', number: 1, picture: 'player_1.png' },
+                    { id: 2, name: 'Bob', number: 2, picture: 'player_2.png' },
+                    { id: 3, name: 'Charlie', number: 3, picture: 'player_3.png' },
+                    { id: 4, name: 'Diana', number: 4, picture: 'player_4.png' }
+                ];
+            }
+        }
+        
+        // Enhanced winner popup function (copied from main script)
+        function showWinnerPopup(playerName, jerseyName, points, playerId, jerseyKey) {
+            console.log('Showing winner popup:', { playerName, jerseyName, points, playerId, jerseyKey });
+            
+            // Get player picture
+            const player = players.find(p => p.id === playerId);
+            const playerPictureUrl = player && player.picture ? `/player_picture/${player.picture}` : '/static/player_pictures/player_1.png';
+            
+            // Get jersey image based on jersey name
+            let jerseyImageUrl = '/static/witte trui.png'; // default
+            if (jerseyName === 'Gele Trui') {
+                jerseyImageUrl = '/static/gele trui.png';
+            } else if (jerseyName === 'Groene Trui') {
+                jerseyImageUrl = '/static/groene trui.png';
+            } else if (jerseyName === 'Bolletjestrui') {
+                jerseyImageUrl = '/static/bolletjes trui.png';
+            } else if (jerseyName === 'Witte Trui') {
+                jerseyImageUrl = '/static/witte trui.png';
+            }
+            
+            // Create popup HTML with enhanced design
+            const popupHTML = `
+                <div id="winnerPopup_${jerseyKey}" class="modal-backdrop winner-popup-backdrop">
+                    <div class="modal winner-modal">
+                        <div class="winner-content">
+                            <div class="winner-header">
+                                <h2>🎉 Nieuwe Winnaar! 🎉</h2>
+                                <button id="winnerPopupClose_${jerseyKey}" class="winner-close-btn">&times;</button>
+                            </div>
+                            
+                            <div class="winner-body">
+                                <div class="jersey-section">
+                                    <img src="${jerseyImageUrl}" alt="${jerseyName}" class="jersey-image">
+                                    <h3 class="jersey-name">${jerseyName}</h3>
+                                </div>
+                                
+                                <div class="winner-section">
+                                    <div class="winner-picture-container">
+                                        <img src="${playerPictureUrl}" alt="${playerName}" class="winner-picture">
+                                    </div>
+                                    <div class="winner-details">
+                                        <h3 class="winner-name">${playerName}</h3>
+                                        <p class="winner-number">#${player ? player.number : '?'}</p>
+                                        <div class="winner-score">
+                                            <span class="score-label">Score:</span>
+                                            <span class="score-value">${points} punten</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="winner-footer">
+                                <button id="winnerPopupCloseBtn_${jerseyKey}" class="btn btn-primary winner-close-button">
+                                    Gefeliciteerd! 🎊
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add popup to page
+            document.body.insertAdjacentHTML('beforeend', popupHTML);
+            
+            // Add event listeners to close buttons
+            const closePopup = () => {
+                const popup = document.getElementById(`winnerPopup_${jerseyKey}`);
+                if (popup) {
+                    popup.classList.add('fade-out');
+                    setTimeout(() => {
+                        if (popup && popup.parentNode) {
+                            popup.remove();
+                        }
+                        // Remove from open popups tracking
+                        openWinnerPopups.delete(jerseyKey);
+                        console.log(`Popup for ${jerseyKey} closed. Open popups:`, Array.from(openWinnerPopups));
+                    }, 300);
+                }
+            };
+            
+            // Wait a moment for DOM to be ready, then add event listeners
+            setTimeout(() => {
+                const closeBtn = document.getElementById(`winnerPopupClose_${jerseyKey}`);
+                const closeBtn2 = document.getElementById(`winnerPopupCloseBtn_${jerseyKey}`);
+                const popup = document.getElementById(`winnerPopup_${jerseyKey}`);
+                
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        closePopup();
+                    });
+                }
+                
+                if (closeBtn2) {
+                    closeBtn2.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        closePopup();
+                    });
+                }
+                
+                if (popup) {
+                    popup.addEventListener('click', (e) => {
+                        if (e.target.id === `winnerPopup_${jerseyKey}`) {
+                            closePopup();
+                        }
+                    });
+                }
+            }, 100);
+            
+            // Auto-close after 8 seconds
+            setTimeout(() => {
+                const popup = document.getElementById(`winnerPopup_${jerseyKey}`);
+                if (popup) {
+                    closePopup();
+                }
+            }, 8000);
+        }
+        
+        // Test functions
+        function testMultiplePopups() {
+            // Show all four jersey popups simultaneously
+            showWinnerPopup('Alice', 'Gele Trui', 85, 1, 'gele_trui');
+            showWinnerPopup('Bob', 'Groene Trui', 72, 2, 'groene_trui');
+            showWinnerPopup('Charlie', 'Bolletjestrui', 68, 3, 'bolletjes_trui');
+            showWinnerPopup('Diana', 'Witte Trui', 91, 4, 'witte_trui');
+            
+            console.log('All popups should now be visible simultaneously');
+        }
+        
+        function testSequentialPopups() {
+            // Show popups with delays to test sequential display
+            showWinnerPopup('Alice', 'Gele Trui', 85, 1, 'gele_trui');
+            setTimeout(() => showWinnerPopup('Bob', 'Groene Trui', 72, 2, 'groene_trui'), 1000);
+            setTimeout(() => showWinnerPopup('Charlie', 'Bolletjestrui', 68, 3, 'bolletjes_trui'), 2000);
+            setTimeout(() => showWinnerPopup('Diana', 'Witte Trui', 91, 4, 'witte_trui'), 3000);
+        }
+        
+        function clearAllPopups() {
+            // Remove all popups from the page
+            const popups = document.querySelectorAll('.winner-popup-backdrop');
+            popups.forEach(popup => {
+                popup.remove();
+            });
+            openWinnerPopups.clear();
+            console.log('All popups cleared');
+        }
+        
+        function checkPopupStatus() {
+            const popups = document.querySelectorAll('.winner-popup-backdrop');
+            const debugInfo = document.getElementById('debugInfo');
+            
+            const status = {
+                openPopups: Array.from(openWinnerPopups),
+                visiblePopups: Array.from(popups).map(p => p.id),
+                totalVisible: popups.length
+            };
+            
+            debugInfo.textContent = JSON.stringify(status, null, 2);
+            console.log('Popup status:', status);
+        }
+        
+        // Load data on page load
+        window.addEventListener('load', loadData);
+    </script>
+</body>
+</html>

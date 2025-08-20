@@ -24,9 +24,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Initialize dark mode
     initializeDarkMode();
     
-    // Clear winner popup session storage on page load (optional - remove this line if you want popups to persist across page refreshes)
-    // sessionStorage.removeItem('shownWinnerPopups');
-    
     // Load all data first
     await loadDopingUsage();
     await loadPlayers();
@@ -95,11 +92,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         await loadRankings();
     };
     
-    // Clear popup session storage (for debugging)
+    // Clear popup tracking (for debugging)
     window.clearPopupSession = function() {
-        sessionStorage.removeItem('shownWinnerPopups');
         openWinnerPopups.clear();
-        console.log('Popup session storage cleared');
+        console.log('Popup tracking cleared');
     };
     
     // Test score checking (for debugging)
@@ -219,9 +215,7 @@ function checkForNewWinners(rankings) {
         'witte_trui': ['rebus', 'wiskunde'] // Brain games
     };
     
-    // Get shown popups from session storage
-    const shownPopups = JSON.parse(sessionStorage.getItem('shownWinnerPopups') || '{}');
-    
+    // Check each jersey type independently
     Object.keys(jerseyTypes).forEach(jerseyKey => {
         if (rankings[jerseyKey] && rankings[jerseyKey].length > 0) {
             const currentWinner = rankings[jerseyKey][0];
@@ -230,15 +224,10 @@ function checkForNewWinners(rankings) {
             const gamesForJersey = jerseyGames[jerseyKey];
             const allScoresEntered = checkAllScoresEntered(gamesForJersey);
             
-            // Create a unique key for this ranking completion
-            const popupKey = `${jerseyKey}_completed`;
-            
             // Show popup if:
             // 1. All scores are entered for this ranking
-            // 2. This popup hasn't been shown before
-            // 3. No popup for this jersey is currently open
+            // 2. No popup for this specific jersey is currently open
             if (allScoresEntered && 
-                !shownPopups[popupKey] && 
                 !openWinnerPopups.has(jerseyKey)) {
                 
                 const playerName = currentWinner[1].name;
@@ -251,10 +240,6 @@ function checkForNewWinners(rankings) {
                 
                 // Mark this popup as open
                 openWinnerPopups.add(jerseyKey);
-                
-                // Mark this popup as shown in session storage
-                shownPopups[popupKey] = true;
-                sessionStorage.setItem('shownWinnerPopups', JSON.stringify(shownPopups));
             }
         }
     });
