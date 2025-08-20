@@ -7,6 +7,7 @@ let gameStartTime = null;
 let gameTimer = null;
 let countdownTimer = null;
 let previousWinners = {}; // Track previous winners for popup notifications
+let openWinnerPopups = new Set(); // Track which jersey popups are currently open
 
 // DOM elements
 const playerNameInput = document.getElementById('playerName');
@@ -30,6 +31,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     await loadDopingUsage();
     await loadPlayers();
     await loadScores();
+    await loadResults();
     await loadOpponents();
     await loadRankings();
     
@@ -77,15 +79,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Test winner popup (for debugging)
     window.testWinnerPopup = function() {
-        showWinnerPopup('Cynthia', 'Groene Trui', 72, 1);
+        showWinnerPopup('Cynthia', 'Groene Trui', 72, 1, 'groene_trui');
     };
     
     // Test all jersey popups (for debugging)
     window.testAllPopups = function() {
-        showWinnerPopup('Alice', 'Gele Trui', 85, 1);
-        setTimeout(() => showWinnerPopup('Bob', 'Groene Trui', 72, 2), 2000);
-        setTimeout(() => showWinnerPopup('Charlie', 'Bolletjestrui', 68, 3), 4000);
-        setTimeout(() => showWinnerPopup('Diana', 'Witte Trui', 91, 4), 6000);
+        showWinnerPopup('Alice', 'Gele Trui', 85, 1, 'gele_trui');
+        setTimeout(() => showWinnerPopup('Bob', 'Groene Trui', 72, 2, 'groene_trui'), 2000);
+        setTimeout(() => showWinnerPopup('Charlie', 'Bolletjestrui', 68, 3, 'bolletjes_trui'), 4000);
+        setTimeout(() => showWinnerPopup('Diana', 'Witte Trui', 91, 4, 'witte_trui'), 6000);
     };
     
     // Force check for new winners (for debugging)
@@ -96,6 +98,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Clear popup session storage (for debugging)
     window.clearPopupSession = function() {
         sessionStorage.removeItem('shownWinnerPopups');
+        openWinnerPopups.clear();
         console.log('Popup session storage cleared');
     };
     
@@ -151,6 +154,19 @@ async function loadScores() {
     }
 }
 
+// Load results from the server
+async function loadResults() {
+    try {
+        const response = await fetch('/get_results');
+        const resultsData = await response.json();
+        window.gameResults = resultsData;
+        console.log('Loaded results:', resultsData);
+    } catch (error) {
+        console.error('Error loading results:', error);
+        window.gameResults = {};
+    }
+}
+
 // Load opponents from the server
 async function loadOpponents() {
     try {
@@ -169,8 +185,9 @@ async function loadRankings() {
         const response = await fetch('/get_rankings');
         const rankings = await response.json();
         
-        // Reload scores to ensure we have the latest data for popup checking
+        // Reload scores and results to ensure we have the latest data for popup checking
         await loadScores();
+        await loadResults();
         
         // Check for new winners and show popups
         checkForNewWinners(rankings);
@@ -185,7 +202,7 @@ async function loadRankings() {
 // Load doping usage data
 let dopingUsage = {};
 
-// Check for new winners and show popups
+// Check for completed rankings and show winner popups
 function checkForNewWinners(rankings) {
     const jerseyTypes = {
         'gele_trui': 'Gele Trui',
@@ -208,43 +225,37 @@ function checkForNewWinners(rankings) {
     Object.keys(jerseyTypes).forEach(jerseyKey => {
         if (rankings[jerseyKey] && rankings[jerseyKey].length > 0) {
             const currentWinner = rankings[jerseyKey][0];
-            const previousWinner = previousWinners[jerseyKey];
-            
-            // Create a unique key for this winner
-            const popupKey = `${jerseyKey}_${currentWinner[0]}_${currentWinner[1].points}`;
             
             // Check if all players have entered scores for the games that contribute to this jersey
             const gamesForJersey = jerseyGames[jerseyKey];
             const allScoresEntered = checkAllScoresEntered(gamesForJersey);
             
+            // Create a unique key for this ranking completion
+            const popupKey = `${jerseyKey}_completed`;
+            
             // Show popup if:
-            // 1. There's no previous winner (first time this jersey has a winner)
-            // 2. There's a different winner than before
-            // 3. This specific popup hasn't been shown before in this session
-            // 4. All players have entered their scores for the games contributing to this jersey
-            if ((!previousWinner || previousWinner.playerId !== currentWinner[0]) && 
+            // 1. All scores are entered for this ranking
+            // 2. This popup hasn't been shown before
+            // 3. No popup for this jersey is currently open
+            if (allScoresEntered && 
                 !shownPopups[popupKey] && 
-                allScoresEntered) {
+                !openWinnerPopups.has(jerseyKey)) {
                 
                 const playerName = currentWinner[1].name;
                 const jerseyName = jerseyTypes[jerseyKey];
                 const points = currentWinner[1].points;
                 const playerId = currentWinner[0];
                 
-                // Show popup for new winner
-                showWinnerPopup(playerName, jerseyName, points, playerId);
+                // Show popup for winner
+                showWinnerPopup(playerName, jerseyName, points, playerId, jerseyKey);
                 
-                // Mark this popup as shown
+                // Mark this popup as open
+                openWinnerPopups.add(jerseyKey);
+                
+                // Mark this popup as shown in session storage
                 shownPopups[popupKey] = true;
                 sessionStorage.setItem('shownWinnerPopups', JSON.stringify(shownPopups));
             }
-            
-            // Always update previous winner
-            previousWinners[jerseyKey] = {
-                playerId: currentWinner[0],
-                playerName: currentWinner[1].name,
-                points: currentWinner[1].points
-            };
         }
     });
 }
@@ -255,22 +266,25 @@ function checkAllScoresEntered(games) {
         return false;
     }
     
+    // Get results data from the backend
+    const results = window.gameResults || {};
+    
     for (const game of games) {
         if (game === 'stoelendans') {
             // For stoelendans, check if the ordering is complete (should include all players)
-            if (!scores[game] || !Array.isArray(scores[game]) || scores[game].length === 0) {
+            if (!results[game] || !Array.isArray(results[game]) || results[game].length === 0) {
                 return false;
             }
             // Check if all players are in the ordering
             const playerIds = players.map(p => p.id);
-            const orderingIds = scores[game].map(p => parseInt(p));
+            const orderingIds = results[game].map(p => parseInt(p));
             const allPlayersIncluded = playerIds.every(id => orderingIds.includes(id));
             if (!allPlayersIncluded) {
                 return false;
             }
         } else if (game === 'petanque' || game === 'kubb') {
             // For tournament games, check if tournament is complete
-            if (!scores[game] || !Array.isArray(scores[game]) || scores[game].length === 0) {
+            if (!results[game] || !Array.isArray(results[game]) || results[game].length === 0) {
                 return false;
             }
             // Check if tournament has final standings
@@ -281,12 +295,12 @@ function checkAllScoresEntered(games) {
             // This could be enhanced to check actual tournament completion
         } else {
             // For individual games (touwspringen, rebus, wiskunde), check if all players have scores
-            if (!scores[game] || typeof scores[game] !== 'object') {
+            if (!results[game] || typeof results[game] !== 'object') {
                 return false;
             }
             
             const playerIds = players.map(p => p.id);
-            const scoreKeys = Object.keys(scores[game]);
+            const scoreKeys = Object.keys(results[game]);
             
             // Check if all players have scores (accounting for string vs number keys)
             const allPlayersHaveScores = playerIds.every(id => 
@@ -303,7 +317,7 @@ function checkAllScoresEntered(games) {
 }
 
 // Show winner popup
-function showWinnerPopup(playerName, jerseyName, points, playerId) {
+function showWinnerPopup(playerName, jerseyName, points, playerId, jerseyKey) {
     // Get player picture
     const player = players.find(p => p.id === playerId);
     const playerPictureUrl = player && player.picture ? `/player_picture/${player.picture}` : '/static/player_pictures/player_1.png';
@@ -322,12 +336,12 @@ function showWinnerPopup(playerName, jerseyName, points, playerId) {
     
     // Create popup HTML with enhanced design
     const popupHTML = `
-        <div id="winnerPopup" class="modal-backdrop winner-popup-backdrop">
+        <div id="winnerPopup_${jerseyKey}" class="modal-backdrop winner-popup-backdrop">
             <div class="modal winner-modal">
                 <div class="winner-content">
                     <div class="winner-header">
                         <h2>🎉 Nieuwe Winnaar! 🎉</h2>
-                        <button id="winnerPopupClose" class="winner-close-btn">&times;</button>
+                        <button id="winnerPopupClose_${jerseyKey}" class="winner-close-btn">&times;</button>
                     </div>
                     
                     <div class="winner-body">
@@ -352,7 +366,7 @@ function showWinnerPopup(playerName, jerseyName, points, playerId) {
                     </div>
                     
                     <div class="winner-footer">
-                        <button id="winnerPopupCloseBtn" class="btn btn-primary winner-close-button">
+                        <button id="winnerPopupCloseBtn_${jerseyKey}" class="btn btn-primary winner-close-button">
                             Gefeliciteerd! 🎊
                         </button>
                     </div>
@@ -366,22 +380,24 @@ function showWinnerPopup(playerName, jerseyName, points, playerId) {
     
     // Add event listeners to close buttons
     const closePopup = () => {
-        const popup = document.getElementById('winnerPopup');
+        const popup = document.getElementById(`winnerPopup_${jerseyKey}`);
         if (popup) {
             popup.classList.add('fade-out');
             setTimeout(() => {
                 if (popup && popup.parentNode) {
                     popup.remove();
                 }
+                // Remove from open popups tracking
+                openWinnerPopups.delete(jerseyKey);
             }, 300);
         }
     };
     
     // Wait a moment for DOM to be ready, then add event listeners
     setTimeout(() => {
-        const closeBtn = document.getElementById('winnerPopupClose');
-        const closeBtn2 = document.getElementById('winnerPopupCloseBtn');
-        const popup = document.getElementById('winnerPopup');
+        const closeBtn = document.getElementById(`winnerPopupClose_${jerseyKey}`);
+        const closeBtn2 = document.getElementById(`winnerPopupCloseBtn_${jerseyKey}`);
+        const popup = document.getElementById(`winnerPopup_${jerseyKey}`);
         
         if (closeBtn) {
             closeBtn.addEventListener('click', (e) => {
@@ -401,7 +417,7 @@ function showWinnerPopup(playerName, jerseyName, points, playerId) {
         
         if (popup) {
             popup.addEventListener('click', (e) => {
-                if (e.target.id === 'winnerPopup') {
+                if (e.target.id === `winnerPopup_${jerseyKey}`) {
                     closePopup();
                 }
             });
@@ -410,7 +426,7 @@ function showWinnerPopup(playerName, jerseyName, points, playerId) {
     
     // Auto-close after 8 seconds
     setTimeout(() => {
-        const popup = document.getElementById('winnerPopup');
+        const popup = document.getElementById(`winnerPopup_${jerseyKey}`);
         if (popup) {
             closePopup();
         }
@@ -747,8 +763,12 @@ async function renderDynamicFields() {
                     <p>(2) x − y = 1</p>
                     <p>Bepaal de waarden van x en y die beide vergelijkingen tegelijkertijd vervullen.</p>
                     <div class="form-group">
-                        <label>Antwoord 1:</label>
-                        <input id="ans1" type="text" placeholder="antwoord 1">
+                        <label>Waarde van x:</label>
+                        <input id="ans1_x" type="text" placeholder="x">
+                    </div>
+                    <div class="form-group">
+                        <label>Waarde van y:</label>
+                        <input id="ans1_y" type="text" placeholder="y">
                     </div>
                 </div>
                 
@@ -757,8 +777,12 @@ async function renderDynamicFields() {
                     <p>Een bedrijf heeft een winstfunctie W(x) = −2x² + 80x − 300, waarbij x het aantal geproduceerde producten voorstelt.</p>
                     <p>Bepaal bij welk productieniveau x de winst maximaal is en bereken ook de waarde van deze maximale winst.</p>
                     <div class="form-group">
-                        <label>Antwoord 2:</label>
-                        <input id="ans2" type="text" placeholder="antwoord 2">
+                        <label>Productieniveau x:</label>
+                        <input id="ans2_x" type="text" placeholder="x">
+                    </div>
+                    <div class="form-group">
+                        <label>Maximale winst W(x):</label>
+                        <input id="ans2_wx" type="text" placeholder="W(x)">
                     </div>
                 </div>
                 
@@ -766,7 +790,7 @@ async function renderDynamicFields() {
                     <h5>Oefening 3. Analyse — Bepaalde integraal</h5>
                     <p>Bereken de waarde van de volgende integraal:</p>
                     <p>∫ van 1 tot 3 (x² + 1) dx</p>
-                    <p>Werk de primitieve functie uit en bereken vervolgens de waarde met de gegeven grenzen.</p>
+                    <p>Werk de primitieve functie uit en bereken vervolgens de waarde met de gegeven grenzen en rond af naar beneden naar het dichtste gehele getal.</p>
                     <div class="form-group">
                         <label>Antwoord 3:</label>
                         <input id="ans3" type="text" placeholder="antwoord 3">
@@ -777,7 +801,7 @@ async function renderDynamicFields() {
                     <h5>Oefening 4. Kansboom — 2 trekken, dezelfde kleur</h5>
                     <p>Een urn bevat 4 groene knikkers, 3 blauwe knikkers en 2 gele knikkers (totaal 9 knikkers).</p>
                     <p>Je trekt twee knikkers zonder terugleggen.</p>
-                    <p>Bereken de kans dat beide knikkers dezelfde kleur hebben.</p>
+                    <p>Bereken de kans dat beide knikkers dezelfde kleur hebben. Antwoord met een breuk.</p>    
                     <div class="form-group">
                         <label>Antwoord 4:</label>
                         <input id="ans4" type="text" placeholder="antwoord 4">
@@ -788,7 +812,7 @@ async function renderDynamicFields() {
                     <h5>Oefening 5. Kansboom — 2 trekken, minstens één gele</h5>
                     <p>Een urn bevat 3 groene knikkers, 3 blauwe knikkers en 3 gele knikkers (totaal 9 knikkers).</p>
                     <p>Je trekt twee knikkers zonder terugleggen.</p>
-                    <p>Bereken de kans dat er minstens één gele knikker wordt getrokken.</p>
+                    <p>Bereken de kans dat er minstens één gele knikker wordt getrokken. Antwoord met een breuk.</p>
                     <div class="form-group">
                         <label>Antwoord 5:</label>
                         <input id="ans5" type="text" placeholder="antwoord 5">
@@ -797,7 +821,7 @@ async function renderDynamicFields() {
                 
                 <div class="question-item">
                     <h5>Oefening 6. Integraal — Onbepaald</h5>
-                    <p>Bepaal de onbepaalde integraal van de functie:</p>
+                    <p>Bepaal de onbepaalde integraal van de functie. Gebruik ^ om een macht aan te geven:</p>
                     <p>∫ (6x² − 4x + 1) dx</p>
                     <div class="form-group">
                         <label>Antwoord 6:</label>
@@ -807,7 +831,7 @@ async function renderDynamicFields() {
                 
                 <div class="question-item">
                     <h5>Oefening 7. Deling — Gewone deling</h5>
-                    <p>Bereken het resultaat van de volgende deling:</p>
+                    <p>Bereken het resultaat van de volgende deling. Antwoord met een geheel getal  :</p>
                     <p>672 ÷ 16</p>
                     <div class="form-group">
                         <label>Antwoord 7:</label>
@@ -817,7 +841,7 @@ async function renderDynamicFields() {
                 
                 <div class="question-item">
                     <h5>Oefening 8. Afgeleide — Polynoom</h5>
-                    <p>Bepaal de afgeleide f'(x) voor de volgende functie:</p>
+                    <p>Bepaal de afgeleide f'(x) voor de volgende functie. Gebruik ^ om een macht aan te geven:</p>
                     <p>f(x) = x³ − 5x² + 4x − 7</p>
                     <div class="form-group">
                         <label>Antwoord 8:</label>
@@ -827,7 +851,7 @@ async function renderDynamicFields() {
                 
                 <div class="question-item">
                     <h5>Oefening 9. Afgeleide — Wortelfunctie</h5>
-                    <p>Bepaal de afgeleide g'(x) voor de volgende functie:</p>
+                    <p>Bepaal de afgeleide g'(x) voor de volgende functie. Gebruik ^ om een macht aan te geven:</p>
                     <p>g(x) = √(x + 1)</p>
                     <p>Opmerking: het domein is x > −1.</p>
                     <div class="form-group">
@@ -1779,8 +1803,19 @@ async function submitScore() {
                 const ans10d = document.getElementById('ans10d').value;
                 answers.push(`${ans10a},${ans10b},${ans10c},${ans10d}`);
             } else {
-                // For wiskunde, normal handling
-                for (let i = 1; i <= 10; i++) {
+                // For wiskunde, handle questions 1 and 2 specially
+                // Question 1: x and y values
+                const ans1_x = document.getElementById('ans1_x').value;
+                const ans1_y = document.getElementById('ans1_y').value;
+                answers.push(`${ans1_x},${ans1_y}`);
+                
+                // Question 2: x and W(x) values
+                const ans2_x = document.getElementById('ans2_x').value;
+                const ans2_wx = document.getElementById('ans2_wx').value;
+                answers.push(`${ans2_x},${ans2_wx}`);
+                
+                // Questions 3-10: normal handling
+                for (let i = 3; i <= 10; i++) {
                     const val = document.getElementById(`ans${i}`).value;
                     answers.push(val || '');
                 }

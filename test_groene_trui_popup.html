@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groene Trui Popup Test</title>
+    <link rel="stylesheet" href="static/styles.css">
+    <style>
+        body {
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-btn {
+            padding: 10px 20px;
+            background: #ff6b35;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-btn:hover {
+            background: #e55a2b;
+        }
+        .debug-info {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Groene Trui Popup Test</h1>
+    
+    <div class="test-section">
+        <h3>Test Popup Functionality</h3>
+        <button class="test-btn" onclick="testGroeneTruiPopup()">Test Groene Trui Popup</button>
+        <button class="test-btn" onclick="testGeleTruiPopup()">Test Gele Trui Popup</button>
+        <button class="test-btn" onclick="testBolletjesTruiPopup()">Test Bolletjestrui Popup</button>
+        <button class="test-btn" onclick="testWitteTruiPopup()">Test Witte Trui Popup</button>
+        <button class="test-btn" onclick="clearPopupSession()">Clear Popup Session</button>
+        <button class="test-btn" onclick="checkCurrentData()">Check Current Data</button>
+        <button class="test-btn" onclick="forceCheckWinners()">Force Check Winners</button>
+        <button class="test-btn" onclick="simulateCompleteData()">Simulate Complete Data</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>Debug Information</h3>
+        <div id="debugInfo" class="debug-info">Click "Check Current Data" to see debug information</div>
+    </div>
+
+    <script>
+        // Mock the necessary functions and data for testing
+        let players = [];
+        let scores = {};
+        let opponents = {};
+        let previousWinners = {};
+        let openWinnerPopups = new Set(); // Track which jersey popups are currently open
+        window.gameResults = {};
+        
+        // Load data from the server
+        async function loadData() {
+            try {
+                const [playersRes, scoresRes, opponentsRes, resultsRes] = await Promise.all([
+                    fetch('/get_players'),
+                    fetch('/get_scores'),
+                    fetch('/get_opponents'),
+                    fetch('/get_results')
+                ]);
+                
+                players = await playersRes.json();
+                scores = await scoresRes.json();
+                opponents = await opponentsRes.json();
+                window.gameResults = await resultsRes.json();
+                
+                console.log('Loaded data:', { players, scores, opponents, gameResults: window.gameResults });
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+        
+        // Enhanced winner popup function (copied from main script)
+        function showWinnerPopup(playerName, jerseyName, points, playerId, jerseyKey) {
+            console.log('Showing winner popup:', { playerName, jerseyName, points, playerId });
+            
+            // Get player picture
+            const player = players.find(p => p.id === playerId);
+            const playerPictureUrl = player && player.picture ? `/player_picture/${player.picture}` : '/static/player_pictures/player_1.png';
+            
+            // Get jersey image based on jersey name
+            let jerseyImageUrl = '/static/witte trui.png'; // default
+            if (jerseyName === 'Gele Trui') {
+                jerseyImageUrl = '/static/gele trui.png';
+            } else if (jerseyName === 'Groene Trui') {
+                jerseyImageUrl = '/static/groene trui.png';
+            } else if (jerseyName === 'Bolletjestrui') {
+                jerseyImageUrl = '/static/bolletjes trui.png';
+            } else if (jerseyName === 'Witte Trui') {
+                jerseyImageUrl = '/static/witte trui.png';
+            }
+            
+                         // Create popup HTML with enhanced design
+             const popupHTML = `
+                 <div id="winnerPopup_${jerseyKey}" class="modal-backdrop winner-popup-backdrop">
+                     <div class="modal winner-modal">
+                         <div class="winner-content">
+                             <div class="winner-header">
+                                 <h2>🎉 Nieuwe Winnaar! 🎉</h2>
+                                 <button id="winnerPopupClose_${jerseyKey}" class="winner-close-btn">&times;</button>
+                             </div>
+                             
+                             <div class="winner-body">
+                                 <div class="jersey-section">
+                                     <img src="${jerseyImageUrl}" alt="${jerseyName}" class="jersey-image">
+                                     <h3 class="jersey-name">${jerseyName}</h3>
+                                 </div>
+                                 
+                                 <div class="winner-section">
+                                     <div class="winner-picture-container">
+                                         <img src="${playerPictureUrl}" alt="${playerName}" class="winner-picture">
+                                     </div>
+                                     <div class="winner-details">
+                                         <h3 class="winner-name">${playerName}</h3>
+                                         <p class="winner-number">#${player ? player.number : '?'}</p>
+                                         <div class="winner-score">
+                                             <span class="score-label">Score:</span>
+                                             <span class="score-value">${points} punten</span>
+                                         </div>
+                                     </div>
+                                 </div>
+                             </div>
+                             
+                             <div class="winner-footer">
+                                 <button id="winnerPopupCloseBtn_${jerseyKey}" class="btn btn-primary winner-close-button">
+                                     Gefeliciteerd! 🎊
+                                 </button>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+             `;
+            
+            // Add popup to page
+            document.body.insertAdjacentHTML('beforeend', popupHTML);
+            
+                         // Add event listeners to close buttons
+             const closePopup = () => {
+                 const popup = document.getElementById(`winnerPopup_${jerseyKey}`);
+                 if (popup) {
+                     popup.classList.add('fade-out');
+                     setTimeout(() => {
+                         if (popup && popup.parentNode) {
+                             popup.remove();
+                         }
+                         // Remove from open popups tracking
+                         openWinnerPopups.delete(jerseyKey);
+                     }, 300);
+                 }
+             };
+            
+                         // Wait a moment for DOM to be ready, then add event listeners
+             setTimeout(() => {
+                 const closeBtn = document.getElementById(`winnerPopupClose_${jerseyKey}`);
+                 const closeBtn2 = document.getElementById(`winnerPopupCloseBtn_${jerseyKey}`);
+                 const popup = document.getElementById(`winnerPopup_${jerseyKey}`);
+                 
+                 if (closeBtn) {
+                     closeBtn.addEventListener('click', (e) => {
+                         e.preventDefault();
+                         e.stopPropagation();
+                         closePopup();
+                     });
+                 }
+                 
+                 if (closeBtn2) {
+                     closeBtn2.addEventListener('click', (e) => {
+                         e.preventDefault();
+                         e.stopPropagation();
+                         closePopup();
+                     });
+                 }
+                 
+                 if (popup) {
+                     popup.addEventListener('click', (e) => {
+                         if (e.target.id === `winnerPopup_${jerseyKey}`) {
+                             closePopup();
+                         }
+                     });
+                 }
+             }, 100);
+            
+                         // Auto-close after 8 seconds
+             setTimeout(() => {
+                 const popup = document.getElementById(`winnerPopup_${jerseyKey}`);
+                 if (popup) {
+                     closePopup();
+                 }
+             }, 8000);
+        }
+        
+        // Check if all players have entered scores for the specified games
+        function checkAllScoresEntered(games) {
+            console.log('Checking if all scores entered for games:', games);
+            console.log('Players:', players);
+            console.log('Results:', window.gameResults);
+            
+            if (!players || players.length === 0) {
+                console.log('No players available');
+                return false;
+            }
+            
+            // Get results data from the backend
+            const results = window.gameResults || {};
+            
+            for (const game of games) {
+                console.log(`Checking game: ${game}`);
+                
+                if (game === 'stoelendans') {
+                    // For stoelendans, check if the ordering is complete (should include all players)
+                    if (!results[game] || !Array.isArray(results[game]) || results[game].length === 0) {
+                        console.log(`Stoelendans: No results or empty array`);
+                        return false;
+                    }
+                    // Check if all players are in the ordering
+                    const playerIds = players.map(p => p.id);
+                    const orderingIds = results[game].map(p => parseInt(p));
+                    const allPlayersIncluded = playerIds.every(id => orderingIds.includes(id));
+                    console.log(`Stoelendans: Player IDs: ${playerIds}, Ordering IDs: ${orderingIds}, All included: ${allPlayersIncluded}`);
+                    if (!allPlayersIncluded) {
+                        return false;
+                    }
+                } else if (game === 'petanque' || game === 'kubb') {
+                    // For tournament games, check if tournament is complete
+                    if (!results[game] || !Array.isArray(results[game]) || results[game].length === 0) {
+                        console.log(`${game}: No results or empty array`);
+                        return false;
+                    }
+                    // Check if tournament has final standings
+                    if (!opponents[game] || !Array.isArray(opponents[game])) {
+                        console.log(`${game}: No opponents data`);
+                        return false;
+                    }
+                    // For now, assume tournament is complete if there are any results
+                    // This could be enhanced to check actual tournament completion
+                } else {
+                    // For individual games (touwspringen, rebus, wiskunde), check if all players have scores
+                    if (!results[game] || typeof results[game] !== 'object') {
+                        console.log(`${game}: No results or not an object`);
+                        return false;
+                    }
+                    
+                    const playerIds = players.map(p => p.id);
+                    const scoreKeys = Object.keys(results[game]);
+                    
+                    console.log(`${game}: Player IDs: ${playerIds}, Score keys: ${scoreKeys}`);
+                    
+                    // Check if all players have scores (accounting for string vs number keys)
+                    const allPlayersHaveScores = playerIds.every(id => 
+                        scoreKeys.includes(id.toString()) || scoreKeys.includes(id)
+                    );
+                    
+                    console.log(`${game}: All players have scores: ${allPlayersHaveScores}`);
+                    
+                    if (!allPlayersHaveScores) {
+                        return false;
+                    }
+                }
+            }
+            
+            console.log('All games have complete scores');
+            return true;
+        }
+        
+        // Check for completed rankings and show winner popups
+        function checkForNewWinners(rankings) {
+            console.log('Checking for completed rankings...');
+            console.log('Current rankings:', rankings);
+            console.log('Game results:', window.gameResults);
+            
+            const jerseyTypes = {
+                'gele_trui': 'Gele Trui',
+                'groene_trui': 'Groene Trui', 
+                'bolletjes_trui': 'Bolletjestrui',
+                'witte_trui': 'Witte Trui'
+            };
+            
+            // Define which games contribute to each jersey
+            const jerseyGames = {
+                'gele_trui': ['touwspringen', 'stoelendans', 'petanque', 'kubb', 'rebus', 'wiskunde'], // All games
+                'groene_trui': ['touwspringen', 'stoelendans'], // Speed games
+                'bolletjes_trui': ['petanque', 'kubb'], // Ball games
+                'witte_trui': ['rebus', 'wiskunde'] // Brain games
+            };
+            
+            // Get shown popups from session storage
+            const shownPopups = JSON.parse(sessionStorage.getItem('shownWinnerPopups') || '{}');
+            console.log('Shown popups:', shownPopups);
+            
+            Object.keys(jerseyTypes).forEach(jerseyKey => {
+                if (rankings[jerseyKey] && rankings[jerseyKey].length > 0) {
+                    const currentWinner = rankings[jerseyKey][0];
+                    
+                    console.log(`Checking ${jerseyKey}:`, {
+                        currentWinner,
+                        jerseyGames: jerseyGames[jerseyKey]
+                    });
+                    
+                    // Check if all players have entered scores for the games that contribute to this jersey
+                    const gamesForJersey = jerseyGames[jerseyKey];
+                    const allScoresEntered = checkAllScoresEntered(gamesForJersey);
+                    
+                    console.log(`${jerseyKey} - All scores entered:`, allScoresEntered);
+                    
+                    // Create a unique key for this ranking completion
+                    const popupKey = `${jerseyKey}_completed`;
+                    
+                    // Show popup if:
+                    // 1. All scores are entered for this ranking
+                    // 2. This popup hasn't been shown before
+                    if (allScoresEntered && !shownPopups[popupKey]) {
+                        
+                        console.log(`Showing popup for ${jerseyKey} winner:`, currentWinner);
+                        
+                        const playerName = currentWinner[1].name;
+                        const jerseyName = jerseyTypes[jerseyKey];
+                        const points = currentWinner[1].points;
+                        const playerId = currentWinner[0];
+                        
+                        // Show popup for winner
+                        showWinnerPopup(playerName, jerseyName, points, playerId, jerseyKey);
+                        
+                        // Mark this popup as shown
+                        shownPopups[popupKey] = true;
+                        sessionStorage.setItem('shownWinnerPopups', JSON.stringify(shownPopups));
+                    } else {
+                        console.log(`Not showing popup for ${jerseyKey}:`, {
+                            allScoresEntered,
+                            notShownBefore: !shownPopups[popupKey]
+                        });
+                    }
+                }
+            });
+        }
+        
+        // Test functions
+        async function testGroeneTruiPopup() {
+            await loadData();
+            showWinnerPopup('Cynthia', 'Groene Trui', 72, 3, 'groene_trui');
+        }
+        
+        async function testGeleTruiPopup() {
+            await loadData();
+            showWinnerPopup('Alice', 'Gele Trui', 85, 1, 'gele_trui');
+        }
+        
+        async function testBolletjesTruiPopup() {
+            await loadData();
+            showWinnerPopup('Bob', 'Bolletjestrui', 68, 2, 'bolletjes_trui');
+        }
+        
+        async function testWitteTruiPopup() {
+            await loadData();
+            showWinnerPopup('Diana', 'Witte Trui', 91, 4, 'witte_trui');
+        }
+        
+                 function clearPopupSession() {
+             sessionStorage.removeItem('shownWinnerPopups');
+             openWinnerPopups.clear();
+             console.log('Popup session storage cleared');
+             alert('Popup session storage cleared');
+         }
+        
+        async function checkCurrentData() {
+            await loadData();
+            
+            // Check which jerseys have complete data
+            const jerseyGames = {
+                'gele_trui': ['touwspringen', 'stoelendans', 'petanque', 'kubb', 'rebus', 'wiskunde'],
+                'groene_trui': ['touwspringen', 'stoelendans'],
+                'bolletjes_trui': ['petanque', 'kubb'],
+                'witte_trui': ['rebus', 'wiskunde']
+            };
+            
+            const jerseyStatus = {};
+            Object.keys(jerseyGames).forEach(jersey => {
+                const games = jerseyGames[jersey];
+                const allEntered = checkAllScoresEntered(games);
+                jerseyStatus[jersey] = {
+                    games: games,
+                    allScoresEntered: allEntered,
+                    missingGames: games.filter(game => {
+                        const results = window.gameResults || {};
+                        if (game === 'stoelendans') {
+                            return !results[game] || !Array.isArray(results[game]) || results[game].length === 0;
+                        } else if (game === 'petanque' || game === 'kubb') {
+                            return !results[game] || !Array.isArray(results[game]) || results[game].length === 0;
+                        } else {
+                            return !results[game] || typeof results[game] !== 'object' || Object.keys(results[game]).length === 0;
+                        }
+                    })
+                };
+            });
+            
+            const debugInfo = document.getElementById('debugInfo');
+            debugInfo.textContent = JSON.stringify({
+                players: players.length,
+                scores: scores,
+                opponents: opponents,
+                gameResults: window.gameResults,
+                jerseyStatus: jerseyStatus,
+                sessionStorage: sessionStorage.getItem('shownWinnerPopups')
+            }, null, 2);
+        }
+        
+        async function forceCheckWinners() {
+            await loadData();
+            try {
+                const response = await fetch('/get_rankings');
+                const rankings = await response.json();
+                checkForNewWinners(rankings);
+            } catch (error) {
+                console.error('Error checking winners:', error);
+                alert('Error checking winners: ' + error.message);
+            }
+        }
+        
+        async function simulateCompleteData() {
+            await loadData();
+            
+            // Simulate complete data for all games
+            const mockResults = {
+                touwspringen: { 1: 50, 2: 45, 3: 40, 4: 35, 5: 30, 6: 25, 7: 20, 8: 15, 10: 10, 11: 5, 12: 4, 13: 3, 14: 2 },
+                stoelendans: [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14],
+                petanque: [{ winner: 1, loser: 2 }, { winner: 3, loser: 4 }],
+                kubb: [{ winner: 1, loser: 3 }, { winner: 2, loser: 4 }],
+                rebus: { 1: { answers: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'], time_seconds_total: 120 } },
+                wiskunde: { 1: { answers: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'], time_seconds_total: 180 } }
+            };
+            
+            // Add some mock data for all players
+            for (let i = 1; i <= 14; i++) {
+                if (i !== 9) { // Skip player 9 as it doesn't exist
+                    mockResults.rebus[i] = { answers: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'], time_seconds_total: 120 + i * 10 };
+                    mockResults.wiskunde[i] = { answers: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'], time_seconds_total: 180 + i * 10 };
+                }
+            }
+            
+            window.gameResults = mockResults;
+            console.log('Simulated complete data:', mockResults);
+            alert('Complete data simulated. Now try "Force Check Winners" to test all jersey popups.');
+        }
+        
+        // Load data on page load
+        window.addEventListener('load', loadData);
+    </script>
+</body>
+</html>

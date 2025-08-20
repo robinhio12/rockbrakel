@@ -235,7 +235,27 @@ def _compute_positions_from_results():
                     answers = data.get('answers')
                     if isinstance(answers, list) and isinstance(key, list) and len(key) == 10 and len(answers) == 10:
                         for i, (a, b) in enumerate(zip(answers, key)):
-                            if i == 9 and game == 'rebus':  # Question 10 for rebus
+                            if i == 0 and game == 'wiskunde':  # Question 1 for wiskunde (x,y)
+                                # Handle x,y values for question 1
+                                if str(a).strip() and str(b).strip():
+                                    user_answers = str(a).split(',')
+                                    correct_answers = str(b).split(',')
+                                    if len(user_answers) == 2 and len(correct_answers) == 2:
+                                        # Check if both x and y are correct
+                                        if (user_answers[0].strip().lower() == correct_answers[0].strip().lower() and
+                                            user_answers[1].strip().lower() == correct_answers[1].strip().lower()):
+                                            correct_count += 1
+                            elif i == 1 and game == 'wiskunde':  # Question 2 for wiskunde (x,W(x))
+                                # Handle x,W(x) values for question 2
+                                if str(a).strip() and str(b).strip():
+                                    user_answers = str(a).split(',')
+                                    correct_answers = str(b).split(',')
+                                    if len(user_answers) == 2 and len(correct_answers) == 2:
+                                        # Check if both x and W(x) are correct
+                                        if (user_answers[0].strip().lower() == correct_answers[0].strip().lower() and
+                                            user_answers[1].strip().lower() == correct_answers[1].strip().lower()):
+                                            correct_count += 1
+                            elif i == 9 and game == 'rebus':  # Question 10 for rebus
                                 # Handle multiple answers for question 10
                                 if str(a).strip() and str(b).strip():
                                     user_answers = str(a).split(',')
@@ -1037,6 +1057,12 @@ def get_scores():
     """Get all scores data"""
     load_data()
     return jsonify(scores)
+
+@app.route('/get_results')
+def get_results():
+    """Get all results data"""
+    load_data()
+    return jsonify(results)
 
 @app.route('/regenerate_opponents', methods=['POST'])
 def regenerate_opponents():
