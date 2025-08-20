@@ -61,7 +61,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                 const resp = await fetch('/admin/clear_results', { method: 'POST' });
                 if (resp.ok) {
                     showMessage('Alle resultaten zijn gewist', 'success');
+                    // Reload all data after clearing
+                    await loadScores();
+                    await loadResults();
+                    await loadDopingUsage();
+                    await loadOpponents();
                     await loadRankings();
+                    // Re-enable regenerate button since all data is cleared
+                    await checkTournamentResultsAndDisableRegenerate();
                 } else {
                     showMessage('Wissen mislukt', 'error');
                 }
@@ -1629,7 +1636,7 @@ async function regenerateOpponents() {
         );
         
         const results = await Promise.all(regeneratePromises);
-        const successful = results.filter(result => result !== null);
+        const successful = results.filter(result => result !== null).filter(result => result !== 'other');
         
         if (successful.length > 0) {
             await loadOpponents();
@@ -2115,15 +2122,15 @@ async function checkTournamentResultsAndDisableRegenerate() {
         if (response.ok) {
             const result = await response.json();
             
-            // Disable button if either Kubb or Petanque has results
-            if (result.kubb_has_results || result.petanque_has_results) {
-                regenerateButton.disabled = true;
-                regenerateButton.textContent = 'Tegenstanders kunnen niet meer gegenereerd worden';
-                regenerateButton.title = 'Er zijn al resultaten ingevoerd voor Kubb of Petanque';
-            } else {
+            // Enable button if at least one game can be regenerated
+            if (result.can_regenerate_kubb || result.can_regenerate_petanque) {
                 regenerateButton.disabled = false;
                 regenerateButton.textContent = 'Nieuwe Tegenstanders Genereren';
                 regenerateButton.title = '';
+            } else {
+                regenerateButton.disabled = true;
+                regenerateButton.textContent = 'Tegenstanders kunnen niet meer gegenereerd worden';
+                regenerateButton.title = 'Er zijn al resultaten ingevoerd voor beide toernooien';
             }
         }
     } catch (error) {

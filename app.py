@@ -1036,11 +1036,13 @@ def get_answer_key():
 
 @app.route('/admin/clear_results', methods=['POST'])
 def clear_results():
-    """Admin: clear all stored results (and legacy scores) after confirmation."""
+    """Admin: clear all stored results, scores, doping usage, and tournaments after confirmation."""
     load_data()
-    global results, scores
+    global results, scores, doping_usage, tournaments
     results = {}
     scores = {}
+    doping_usage = {}
+    tournaments = {}
     # Recreate empty structures
     _ensure_results_structures()
     save_data()
@@ -1100,11 +1102,51 @@ def get_results():
 
 @app.route('/regenerate_opponents', methods=['POST'])
 def regenerate_opponents():
-    """Regenerate opponent pairs for all games"""
+    """Regenerate opponent pairs for games that don't have results yet"""
     load_data()
-    generate_opponents()
+    
+    # Check which games can be regenerated
+    kubb_has_results = False
+    petanque_has_results = False
+    
+    # Check Kubb results
+    if 'kubb' in tournaments:
+        for round_matches in tournaments['kubb']['rounds']:
+            for match in round_matches:
+                if match['completed'] and match['player2'] is not None:  # Exclude bye matches
+                    kubb_has_results = True
+                    break
+            if kubb_has_results:
+                break
+    
+    # Check Petanque results
+    if 'petanque' in tournaments:
+        for round_matches in tournaments['petanque']['rounds']:
+            for match in round_matches:
+                if match['completed'] and match['player2'] is not None:  # Exclude bye matches
+                    petanque_has_results = True
+                    break
+            if petanque_has_results:
+                break
+    
+    # Only regenerate games that don't have results
+    games_to_regenerate = []
+    if not kubb_has_results:
+        games_to_regenerate.append('kubb')
+    if not petanque_has_results:
+        games_to_regenerate.append('petanque')
+    
+    if not games_to_regenerate:
+        return jsonify({'success': False, 'message': 'Geen toernooien kunnen opnieuw gegenereerd worden'}), 400
+    
+    # Generate new tournaments for eligible games
+    for game in games_to_regenerate:
+        generate_tournament(game)
+    
     save_data()
-    return jsonify({'success': True, 'message': 'Tegenstanders succesvol opnieuw gegenereerd'})
+    
+    games_str = ' en '.join(games_to_regenerate)
+    return jsonify({'success': True, 'message': f'Tegenstanders voor {games_str} succesvol opnieuw gegenereerd'})
 
 @app.route('/generate_tournament/<game>', methods=['POST'])
 def generate_tournament_route(game):
@@ -1335,7 +1377,9 @@ def check_tournament_results():
     return jsonify({
         'success': True,
         'kubb_has_results': kubb_has_results,
-        'petanque_has_results': petanque_has_results
+        'petanque_has_results': petanque_has_results,
+        'can_regenerate_kubb': not kubb_has_results,
+        'can_regenerate_petanque': not petanque_has_results
     })
 
 if __name__ == '__main__':

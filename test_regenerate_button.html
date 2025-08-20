@@ -90,9 +90,9 @@
                  <ul>
              <li>✅ Backend endpoint to check tournament results</li>
              <li>✅ Frontend function to disable regenerate button</li>
-             <li>✅ Button disabled when Kubb has results</li>
-             <li>✅ Button disabled when Petanque has results</li>
-             <li>✅ Button enabled when no results exist</li>
+             <li>✅ Button enabled when Kubb has no results</li>
+             <li>✅ Button enabled when Petanque has no results</li>
+             <li>✅ Button disabled only when both games have results</li>
              <li>✅ Bye matches excluded from result count</li>
              <li>✅ Automatic check on page load</li>
              <li>✅ Automatic check after tournament submissions</li>
@@ -122,49 +122,50 @@
             }
         }
         
-        // Update regenerate button based on tournament results
-        function updateRegenerateButton(result) {
-            const regenerateButton = document.getElementById('regenerateOpponents');
-            const statusDiv = document.getElementById('buttonStatus');
-            
-            if (result.kubb_has_results || result.petanque_has_results) {
-                regenerateButton.disabled = true;
-                regenerateButton.textContent = 'Tegenstanders kunnen niet meer gegenereerd worden';
-                regenerateButton.title = 'Er zijn al resultaten ingevoerd voor Kubb of Petanque';
-                statusDiv.innerHTML = '<div class="status info">Button disabled - Tournament results exist</div>';
-            } else {
-                regenerateButton.disabled = false;
-                regenerateButton.textContent = 'Nieuwe Tegenstanders Genereren';
-                regenerateButton.title = '';
-                statusDiv.innerHTML = '<div class="status success">Button enabled - No tournament results</div>';
-            }
-        }
+                 // Update regenerate button based on tournament results
+         function updateRegenerateButton(result) {
+             const regenerateButton = document.getElementById('regenerateOpponents');
+             const statusDiv = document.getElementById('buttonStatus');
+             
+             // Enable button if at least one game can be regenerated
+             if (result.can_regenerate_kubb || result.can_regenerate_petanque) {
+                 regenerateButton.disabled = false;
+                 regenerateButton.textContent = 'Nieuwe Tegenstanders Genereren';
+                 regenerateButton.title = '';
+                 statusDiv.innerHTML = '<div class="status success">Button enabled - At least one game can be regenerated</div>';
+             } else {
+                 regenerateButton.disabled = true;
+                 regenerateButton.textContent = 'Tegenstanders kunnen niet meer gegenereerd worden';
+                 regenerateButton.title = 'Er zijn al resultaten ingevoerd voor beide toernooien';
+                 statusDiv.innerHTML = '<div class="status info">Button disabled - Both tournaments have results</div>';
+             }
+         }
         
-        // Check tournament results and disable regenerate button if needed
-        async function checkTournamentResultsAndDisableRegenerate() {
-            const regenerateButton = document.getElementById('regenerateOpponents');
-            if (!regenerateButton) return;
-            
-            try {
-                const response = await fetch('/check_tournament_results');
-                if (response.ok) {
-                    const result = await response.json();
-                    
-                    // Disable button if either Kubb or Petanque has results
-                    if (result.kubb_has_results || result.petanque_has_results) {
-                        regenerateButton.disabled = true;
-                        regenerateButton.textContent = 'Tegenstanders kunnen niet meer gegenereerd worden';
-                        regenerateButton.title = 'Er zijn al resultaten ingevoerd voor Kubb of Petanque';
-                    } else {
-                        regenerateButton.disabled = false;
-                        regenerateButton.textContent = 'Nieuwe Tegenstanders Genereren';
-                        regenerateButton.title = '';
-                    }
-                }
-            } catch (error) {
-                console.error('Error checking tournament results:', error);
-            }
-        }
+                 // Check tournament results and disable regenerate button if needed
+         async function checkTournamentResultsAndDisableRegenerate() {
+             const regenerateButton = document.getElementById('regenerateOpponents');
+             if (!regenerateButton) return;
+             
+             try {
+                 const response = await fetch('/check_tournament_results');
+                 if (response.ok) {
+                     const result = await response.json();
+                     
+                     // Enable button if at least one game can be regenerated
+                     if (result.can_regenerate_kubb || result.can_regenerate_petanque) {
+                         regenerateButton.disabled = false;
+                         regenerateButton.textContent = 'Nieuwe Tegenstanders Genereren';
+                         regenerateButton.title = '';
+                     } else {
+                         regenerateButton.disabled = true;
+                         regenerateButton.textContent = 'Tegenstanders kunnen niet meer gegenereerd worden';
+                         regenerateButton.title = 'Er zijn al resultaten ingevoerd voor beide toernooien';
+                     }
+                 }
+             } catch (error) {
+                 console.error('Error checking tournament results:', error);
+             }
+         }
         
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {

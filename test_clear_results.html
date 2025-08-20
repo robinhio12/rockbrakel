@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Clear Results Functionality</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .clear-button {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        .clear-button:hover {
+            background: #c82333;
+        }
+        .data-display {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Clear Results Functionality</h1>
+    
+    <div class="test-section">
+        <h2>Current Data Status</h2>
+        <p>Check the current state of all data before and after clearing.</p>
+        <button class="test-button" onclick="checkAllData()">Check All Data</button>
+        <div id="dataStatus"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Clear Results Test</h2>
+        <p>This button should clear ALL data: results, scores, doping usage, and tournaments.</p>
+        <button id="clearResults" class="clear-button">Alle resultaten wissen</button>
+        <div id="clearStatus"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Feature Checklist</h2>
+        <ul>
+            <li>✅ Backend clears results data</li>
+            <li>✅ Backend clears scores data</li>
+            <li>✅ Backend clears doping usage data</li>
+            <li>✅ Backend clears tournaments data</li>
+            <li>✅ Frontend reloads all data after clearing</li>
+            <li>✅ Regenerate button is re-enabled after clearing</li>
+            <li>✅ Confirmation dialog before clearing</li>
+        </ul>
+    </div>
+
+    <script>
+        // Global variables to store data
+        let currentResults = {};
+        let currentScores = {};
+        let currentDopingUsage = {};
+        let currentTournaments = {};
+        let currentOpponents = {};
+
+        // Check all data from the server
+        async function checkAllData() {
+            const statusDiv = document.getElementById('dataStatus');
+            statusDiv.innerHTML = '<div class="status info">Checking all data...</div>';
+            
+            try {
+                // Fetch all data types
+                const [resultsRes, scoresRes, dopingRes, tournamentsRes, opponentsRes] = await Promise.all([
+                    fetch('/get_results'),
+                    fetch('/get_scores'),
+                    fetch('/get_doping_usage'),
+                    fetch('/get_tournaments'),
+                    fetch('/get_opponents')
+                ]);
+
+                if (resultsRes.ok && scoresRes.ok && dopingRes.ok && tournamentsRes.ok && opponentsRes.ok) {
+                    currentResults = await resultsRes.json();
+                    currentScores = await scoresRes.json();
+                    currentDopingUsage = await dopingRes.json();
+                    currentTournaments = await tournamentsRes.json();
+                    currentOpponents = await opponentsRes.json();
+
+                    const resultsCount = Object.keys(currentResults).length;
+                    const scoresCount = Object.keys(currentScores).length;
+                    const dopingCount = Object.keys(currentDopingUsage).length;
+                    const tournamentsCount = Object.keys(currentTournaments).length;
+                    const opponentsCount = Object.keys(currentOpponents).length;
+
+                    statusDiv.innerHTML = `
+                        <div class="status success">✅ All data loaded successfully!</div>
+                        <div class="data-display">
+                            <strong>Data Summary:</strong><br>
+                            Results: ${resultsCount} entries<br>
+                            Scores: ${scoresCount} entries<br>
+                            Doping Usage: ${dopingCount} entries<br>
+                            Tournaments: ${tournamentsCount} entries<br>
+                            Opponents: ${opponentsCount} entries
+                        </div>
+                        <div class="data-display">
+                            <strong>Results:</strong><br>
+                            ${JSON.stringify(currentResults, null, 2)}
+                        </div>
+                        <div class="data-display">
+                            <strong>Scores:</strong><br>
+                            ${JSON.stringify(currentScores, null, 2)}
+                        </div>
+                        <div class="data-display">
+                            <strong>Doping Usage:</strong><br>
+                            ${JSON.stringify(currentDopingUsage, null, 2)}
+                        </div>
+                        <div class="data-display">
+                            <strong>Tournaments:</strong><br>
+                            ${JSON.stringify(currentTournaments, null, 2)}
+                        </div>
+                        <div class="data-display">
+                            <strong>Opponents:</strong><br>
+                            ${JSON.stringify(currentOpponents, null, 2)}
+                        </div>
+                    `;
+                } else {
+                    statusDiv.innerHTML = '<div class="status error">❌ Error loading data from server</div>';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = '<div class="status error">❌ Error checking data: ' + error.message + '</div>';
+            }
+        }
+
+        // Confirmation modal function
+        function confirmModal(message) {
+            return new Promise((resolve) => {
+                const backdrop = document.createElement('div');
+                backdrop.style.position = 'fixed';
+                backdrop.style.top = '0';
+                backdrop.style.left = '0';
+                backdrop.style.width = '100%';
+                backdrop.style.height = '100%';
+                backdrop.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                backdrop.style.display = 'flex';
+                backdrop.style.justifyContent = 'center';
+                backdrop.style.alignItems = 'center';
+                backdrop.style.zIndex = '1000';
+
+                const modal = document.createElement('div');
+                modal.style.backgroundColor = 'white';
+                modal.style.padding = '20px';
+                modal.style.borderRadius = '5px';
+                modal.style.maxWidth = '400px';
+                modal.style.textAlign = 'center';
+                modal.innerHTML = `
+                    <h4>Bevestiging</h4>
+                    <p>${message}</p>
+                    <div style="margin-top: 20px;">
+                        <button id="confirmNo" style="margin-right: 10px; padding: 8px 16px; border: 1px solid #ccc; background: #f8f9fa; cursor: pointer;">Annuleren</button>
+                        <button id="confirmYes" style="padding: 8px 16px; border: none; background: #dc3545; color: white; cursor: pointer;">Bevestigen</button>
+                    </div>
+                `;
+
+                backdrop.appendChild(modal);
+                document.body.appendChild(backdrop);
+
+                const cleanup = () => backdrop.remove();
+                modal.querySelector('#confirmYes').addEventListener('click', () => { cleanup(); resolve(true); });
+                modal.querySelector('#confirmNo').addEventListener('click', () => { cleanup(); resolve(false); });
+            });
+        }
+
+        // Clear results button functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const clearBtn = document.getElementById('clearResults');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', async () => {
+                    const statusDiv = document.getElementById('clearStatus');
+                    const ok = await confirmModal('Weet je zeker dat je alle resultaten wil wissen?');
+                    if (!ok) return;
+                    
+                    statusDiv.innerHTML = '<div class="status info">Clearing all data...</div>';
+                    
+                    try {
+                        const resp = await fetch('/admin/clear_results', { method: 'POST' });
+                        if (resp.ok) {
+                            statusDiv.innerHTML = '<div class="status success">✅ Alle resultaten zijn gewist!</div>';
+                            
+                            // Wait a moment then check data again
+                            setTimeout(() => {
+                                checkAllData();
+                            }, 1000);
+                        } else {
+                            statusDiv.innerHTML = '<div class="status error">❌ Wissen mislukt</div>';
+                        }
+                    } catch (e) {
+                        statusDiv.innerHTML = '<div class="status error">❌ Wissen mislukt: ' + e.message + '</div>';
+                    }
+                });
+            }
+        });
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAllData();
+        });
+    </script>
+</body>
+</html>

@@ -40,17 +40,18 @@ This document summarizes the changes made to implement the requirement that the 
 - No indication of when regeneration was no longer allowed
 
 ### After
-- Button is disabled when either Kubb or Petanque has any completed matches
+- Button is disabled only when both Kubb and Petanque have completed matches
 - Button text changes to "Tegenstanders kunnen niet meer gegenereerd worden"
 - Clear tooltip explains why the button is disabled
-- Button remains enabled only when no tournament results exist
+- Button remains enabled when at least one game has no tournament results
+- When clicked, only regenerates tournaments for games that don't have results yet
 
 ## Technical Implementation Details
 
 ### Button States
-- **Enabled**: "Nieuwe Tegenstanders Genereren" (when no results exist)
-- **Disabled**: "Tegenstanders kunnen niet meer gegenereerd worden" (when results exist)
-- **Tooltip**: "Er zijn al resultaten ingevoerd voor Kubb of Petanque" (when disabled)
+- **Enabled**: "Nieuwe Tegenstanders Genereren" (when at least one game has no results)
+- **Disabled**: "Tegenstanders kunnen niet meer gegenereerd worden" (when both games have results)
+- **Tooltip**: "Er zijn al resultaten ingevoerd voor beide toernooien" (when disabled)
 
 ### API Integration
 - Frontend calls `/check_tournament_results` whenever:
@@ -62,8 +63,8 @@ This document summarizes the changes made to implement the requirement that the 
 ### Result Detection Logic
 - Checks all rounds in both Kubb and Petanque tournaments
 - Looks for any matches with `completed: true` AND `player2` is not None (excludes bye matches)
-- If any completed match exists, the button is disabled
-- Only enables button when both tournaments have no completed matches
+- If both games have completed matches, the button is disabled
+- Enables button when at least one game has no completed matches
 - Bye matches (where `player2` is None) are automatically completed but don't count as submitted results
 
 ### Error Handling
