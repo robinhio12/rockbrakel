@@ -18,11 +18,11 @@
             "registered_at": "2025-08-15T08:48:31.976216",
             "picture": "player_5.png"
           },
-          "winner": null,
-          "loser": null,
+          "winner": 8,
+          "loser": 5,
           "doping1": false,
           "doping2": false,
-          "completed": false
+          "completed": true
         },
         {
           "match_id": "petanque_r1_m1",

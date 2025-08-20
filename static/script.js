@@ -34,12 +34,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Now render the dynamic fields with all data loaded
     await renderDynamicFields();
+    await checkExistingScoreAndDisableSubmit();
+    await checkTournamentResultsAndDisableRegenerate();
     
     // Event listeners
     registerPlayerBtn.addEventListener('click', registerPlayer);
     submitScoreBtn.addEventListener('click', submitScore);
     gameSelect.addEventListener('change', async () => {
         await renderDynamicFields();
+        await checkExistingScoreAndDisableSubmit();
     });
     
     // Add event listener for regenerate opponents button
@@ -169,6 +172,8 @@ async function loadOpponents() {
         const response = await fetch('/get_opponents');
         opponents = await response.json();
         displayOpponents();
+        // Check tournament results and update regenerate button state
+        await checkTournamentResultsAndDisableRegenerate();
     } catch (error) {
         console.error('Error loading opponents:', error);
         showMessage('Fout bij het laden van tegenstanders', 'error');
@@ -416,6 +421,107 @@ function showWinnerPopup(playerName, jerseyName, points, playerId, jerseyKey) {
             closePopup();
         }
     }, 8000);
+}
+
+// Show brain game popup with results
+function showBrainGamePopup(game, correctAnswers, time) {
+    const gameName = game === 'wiskunde' ? 'Wiskunde' : 'Rebus';
+    const popupId = `brainGamePopup_${Date.now()}`;
+    
+    // Create popup HTML
+    const popupHTML = `
+        <div id="${popupId}" class="modal-backdrop brain-game-popup-backdrop">
+            <div class="modal brain-game-modal">
+                <div class="brain-game-content">
+                    <div class="brain-game-header">
+                        <h2>🎯 ${gameName} Resultaten</h2>
+                        <button id="brainGamePopupClose_${popupId}" class="brain-game-close-btn">&times;</button>
+                    </div>
+                    
+                    <div class="brain-game-body">
+                        <div class="result-section">
+                            <div class="result-item">
+                                <span class="result-label">Correcte antwoorden:</span>
+                                <span class="result-value correct-answers">${correctAnswers}/10</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label">Tijd:</span>
+                                <span class="result-value time">${time.toFixed(2)} seconden</span>
+                            </div>
+                        </div>
+                        
+                        <div class="performance-indicator">
+                            ${correctAnswers >= 8 ? '🏆 Uitstekend!' : 
+                              correctAnswers >= 6 ? '👍 Goed gedaan!' : 
+                              correctAnswers >= 4 ? '😊 Niet slecht!' : 
+                              '💪 Blijf oefenen!'}
+                        </div>
+                    </div>
+                    
+                    <div class="brain-game-footer">
+                        <button id="brainGamePopupCloseBtn_${popupId}" class="btn btn-primary brain-game-close-button">
+                            OK
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add popup to page
+    document.body.insertAdjacentHTML('beforeend', popupHTML);
+    
+    // Add event listeners to close buttons
+    const closePopup = () => {
+        const popup = document.getElementById(popupId);
+        if (popup) {
+            popup.classList.add('fade-out');
+            setTimeout(() => {
+                if (popup && popup.parentNode) {
+                    popup.remove();
+                }
+            }, 300);
+        }
+    };
+    
+    // Wait a moment for DOM to be ready, then add event listeners
+    setTimeout(() => {
+        const closeBtn = document.getElementById(`brainGamePopupClose_${popupId}`);
+        const closeBtn2 = document.getElementById(`brainGamePopupCloseBtn_${popupId}`);
+        const popup = document.getElementById(popupId);
+        
+        if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closePopup();
+            });
+        }
+        
+        if (closeBtn2) {
+            closeBtn2.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closePopup();
+            });
+        }
+        
+        if (popup) {
+            popup.addEventListener('click', (e) => {
+                if (e.target.id === popupId) {
+                    closePopup();
+                }
+            });
+        }
+    }, 100);
+    
+    // Auto-close after 6 seconds
+    setTimeout(() => {
+        const popup = document.getElementById(popupId);
+        if (popup) {
+            closePopup();
+        }
+    }, 6000);
 }
 
 async function loadDopingUsage() {
@@ -669,7 +775,7 @@ async function renderDynamicFields() {
         const playerSelect = document.getElementById('tsPlayer');
         const dopingCheckbox = document.getElementById('tsDoping');
         if (playerSelect && dopingCheckbox) {
-            playerSelect.addEventListener('change', function() {
+            playerSelect.addEventListener('change', async function() {
                 const selectedPlayerId = parseInt(this.value);
                 if (selectedPlayerId && selectedPlayerId in dopingUsage) {
                     dopingCheckbox.disabled = true;
@@ -681,35 +787,84 @@ async function renderDynamicFields() {
                     dopingCheckbox.parentElement.style.opacity = '1';
                     dopingCheckbox.parentElement.title = '';
                 }
+                
+                // Check for existing score and disable submit button if needed
+                await checkExistingScoreAndDisableSubmit();
             });
         }
     } else if (game === 'stoelendans') {
-        const items = players
-            .map(p => `<li class=\"sd-item\" draggable=\"true\" data-id=\"${p.id}\">${p.name} (#${p.number})</li>`) 
-            .join('');
-        const playerOptions = players
-            .map(p => `<option value="${p.id}">${p.number} - ${p.name}</option>`) 
-            .join('');
-        dynamicFields.innerHTML = `
-            <div class="form-group">
-                <label>Sleep om te sorteren (bovenaan = winnaar)</label>
-                <ul id="sdList" class="dnd-list">${items}</ul>
-                <small style="color:#6c757d">Sleep spelers in de juiste volgorde van 1 → laatste.</small>
-            </div>
-            <div class="form-group">
-                <label>Doping voor spelers (verdubbelt punten):</label>
-                <small class="doping-warning">Let op: Doping kan maar één keer gebruikt worden over alle spellen per speler!</small>
-                <div id="sdDopingPlayers" class="doping-players-list">
-                    ${players.map(player => `
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="sdDoping_${player.id}" value="${player.id}"> 
-                            ${player.name} (#${player.number})
-                        </label>
-                    `).join('')}
+        // Check if device is mobile
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+        
+        if (isMobile) {
+            // Mobile interface with dropdowns
+            const playerOptions = players
+                .map(p => `<option value="${p.id}">${p.number} - ${p.name}</option>`) 
+                .join('');
+            
+            const positionSelects = players.map((_, index) => `
+                <div class="form-group">
+                    <label>Positie ${index + 1}:</label>
+                    <select class="position-select" data-position="${index}">
+                        <option value="">Selecteer speler</option>
+                        ${playerOptions}
+                    </select>
                 </div>
-            </div>
-        `;
-        initDndList();
+            `).join('');
+            
+            dynamicFields.innerHTML = `
+                <div class="form-group">
+                    <label>Selecteer de volgorde van spelers (1 = winnaar)</label>
+                    <div id="mobileStoelendans">
+                        ${positionSelects}
+                    </div>
+                    <small style="color:#6c757d">Selecteer voor elke positie de juiste speler.</small>
+                </div>
+                <div class="form-group">
+                    <label>Doping voor spelers (verdubbelt punten):</label>
+                    <small class="doping-warning">Let op: Doping kan maar één keer gebruikt worden over alle spellen per speler!</small>
+                    <div id="sdDopingPlayers" class="doping-players-list">
+                        ${players.map(player => `
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="sdDoping_${player.id}" value="${player.id}"> 
+                                ${player.name} (#${player.number})
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            // Initialize mobile stoelendans functionality
+            initMobileStoelendans();
+        } else {
+            // Desktop interface with drag-and-drop
+            const items = players
+                .map(p => `<li class="sd-item" draggable="true" data-id="${p.id}">${p.name} (#${p.number})</li>`) 
+                .join('');
+            const playerOptions = players
+                .map(p => `<option value="${p.id}">${p.number} - ${p.name}</option>`) 
+                .join('');
+            dynamicFields.innerHTML = `
+                <div class="form-group">
+                    <label>Sleep om te sorteren (bovenaan = winnaar)</label>
+                    <ul id="sdList" class="dnd-list">${items}</ul>
+                    <small style="color:#6c757d">Sleep spelers in de juiste volgorde van 1 → laatste.</small>
+                </div>
+                <div class="form-group">
+                    <label>Doping voor spelers (verdubbelt punten):</label>
+                    <small class="doping-warning">Let op: Doping kan maar één keer gebruikt worden over alle spellen per speler!</small>
+                    <div id="sdDopingPlayers" class="doping-players-list">
+                        ${players.map(player => `
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="sdDoping_${player.id}" value="${player.id}"> 
+                                ${player.name} (#${player.number})
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            initDndList();
+        }
         
         // Initialize doping checkboxes with usage status
         initializeDopingCheckboxes('stoelendans');
@@ -871,7 +1026,7 @@ async function renderDynamicFields() {
         // Add event listener for player selection to start countdown and check doping
         const playerSelect = document.getElementById('bwPlayer');
         const dopingCheckbox = document.getElementById('bwDoping');
-        playerSelect.addEventListener('change', function() {
+        playerSelect.addEventListener('change', async function() {
             if (this.value) {
                 startGameCountdown('wiskunde');
                 
@@ -887,6 +1042,9 @@ async function renderDynamicFields() {
                     dopingCheckbox.parentElement.style.opacity = '1';
                     dopingCheckbox.parentElement.title = '';
                 }
+                
+                // Check for existing score and disable submit button if needed
+                await checkExistingScoreAndDisableSubmit();
             }
         });
     } else if (game === 'rebus') {
@@ -1016,7 +1174,7 @@ async function renderDynamicFields() {
         // Add event listener for player selection to start countdown and check doping
         const playerSelect = document.getElementById('bwPlayer');
         const dopingCheckbox = document.getElementById('bwDoping');
-        playerSelect.addEventListener('change', function() {
+        playerSelect.addEventListener('change', async function() {
             if (this.value) {
                 startGameCountdown('rebus');
                 
@@ -1032,6 +1190,9 @@ async function renderDynamicFields() {
                     dopingCheckbox.parentElement.style.opacity = '1';
                     dopingCheckbox.parentElement.title = '';
                 }
+                
+                // Check for existing score and disable submit button if needed
+                await checkExistingScoreAndDisableSubmit();
             }
         });
     }
@@ -1361,6 +1522,43 @@ function initDndList() {
     }
 }
 
+// Initialize mobile interface for Stoelendans
+function initMobileStoelendans() {
+    const selects = document.querySelectorAll('.position-select');
+    const usedPlayers = new Set();
+    
+    selects.forEach(select => {
+        select.addEventListener('change', function() {
+            const selectedValue = this.value;
+            const previousValue = this.dataset.previousValue;
+            
+            // Remove previous selection from used players
+            if (previousValue) {
+                usedPlayers.delete(previousValue);
+            }
+            
+            // Add new selection to used players
+            if (selectedValue) {
+                usedPlayers.add(selectedValue);
+            }
+            
+            // Update dataset
+            this.dataset.previousValue = selectedValue;
+            
+            // Update other selects to disable used players
+            selects.forEach(otherSelect => {
+                if (otherSelect !== this) {
+                    Array.from(otherSelect.options).forEach(option => {
+                        if (option.value && option.value !== otherSelect.value) {
+                            option.disabled = usedPlayers.has(option.value);
+                        }
+                    });
+                }
+            });
+        });
+    });
+}
+
 // Simple confirm modal that returns a Promise<boolean>
 function confirmModal(message) {
     return new Promise((resolve) => {
@@ -1381,6 +1579,29 @@ function confirmModal(message) {
         const cleanup = () => backdrop.remove();
         modal.querySelector('#modalYes').addEventListener('click', () => { cleanup(); resolve(true); });
         modal.querySelector('#modalNo').addEventListener('click', () => { cleanup(); resolve(false); });
+    });
+}
+
+// Confirmation popup for score submission
+function showConfirmationPopup(message) {
+    return new Promise((resolve) => {
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <h4>Score Invoeren</h4>
+            <p>${message}</p>
+            <div class="modal-actions">
+                <button id="confirmNo" class="btn">Annuleren</button>
+                <button id="confirmYes" class="btn btn-primary">Bevestigen</button>
+            </div>
+        `;
+        backdrop.appendChild(modal);
+        document.body.appendChild(backdrop);
+        const cleanup = () => backdrop.remove();
+        modal.querySelector('#confirmYes').addEventListener('click', () => { cleanup(); resolve(true); });
+        modal.querySelector('#confirmNo').addEventListener('click', () => { cleanup(); resolve(false); });
     });
 }
 
@@ -1595,6 +1816,10 @@ async function submitTournamentMatch(game) {
             renderTournamentFields(game);
             // Refresh opponents view
             await loadOpponents();
+            // Check for existing scores and update submit button state
+            await checkExistingScoreAndDisableSubmit();
+            // Check tournament results and update regenerate button state
+            await checkTournamentResultsAndDisableRegenerate();
         } else {
             const errorResult = await submitResponse.json();
             if (errorResult.doping_error) {
@@ -1714,6 +1939,12 @@ async function submitScore() {
         return;
     }
 
+    // Show confirmation popup before submitting
+    const confirmed = await showConfirmationPopup('Weet je zeker dat je deze score wilt invoeren?');
+    if (!confirmed) {
+        return;
+    }
+
     let payload = { game: game };
 
     try {
@@ -1731,13 +1962,36 @@ async function submitScore() {
             payload.jumps = parseInt(jumps);
             payload.doping = doping;
         } else if (game === 'stoelendans') {
-            const list = document.getElementById('sdList');
-            const items = Array.from(list.children);
-            const ranking = items.map(item => parseInt(item.dataset.id));
+            // Check if device is mobile
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
             
-            if (ranking.length === 0) {
-                showMessage('Sleep spelers in de juiste volgorde', 'error');
-                return;
+            let ranking = [];
+            
+            if (isMobile) {
+                // Mobile interface: get ranking from dropdowns
+                const selects = document.querySelectorAll('.position-select');
+                ranking = Array.from(selects).map(select => parseInt(select.value)).filter(id => !isNaN(id));
+                
+                if (ranking.length === 0) {
+                    showMessage('Selecteer de volgorde van spelers', 'error');
+                    return;
+                }
+                
+                // Check if all positions are filled
+                if (ranking.length !== players.length) {
+                    showMessage('Vul alle posities in', 'error');
+                    return;
+                }
+            } else {
+                // Desktop interface: get ranking from drag-and-drop list
+                const list = document.getElementById('sdList');
+                const items = Array.from(list.children);
+                ranking = items.map(item => parseInt(item.dataset.id));
+                
+                if (ranking.length === 0) {
+                    showMessage('Sleep spelers in de juiste volgorde', 'error');
+                    return;
+                }
             }
             
             // Get all selected doping players
@@ -1820,19 +2074,14 @@ async function submitScore() {
             body: JSON.stringify(payload)
         });
         let result = await response.json();
-        if (response.status === 409 && result.needs_overwrite) {
-            const ok = await confirmModal('Er bestaat al een score voor deze speler. Wil je de vorige score overschrijven?');
-            if (!ok) return;
-            payload.overwrite = true;
-            response = await fetch('/submit_game_results', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            result = await response.json();
-        }
         if (response.ok && result.success) {
             showMessage(result.message, 'success');
+            
+            // Show popup for brain games with correct answers and time
+            if ((game === 'rebus' || game === 'wiskunde') && result.correct_answers !== undefined && result.time !== undefined) {
+                showBrainGamePopup(game, result.correct_answers, result.time);
+            }
+            
             await loadRankings();
             await loadDopingUsage(); // Reload doping usage after submission
             // Re-initialize doping checkboxes with updated data
@@ -1840,6 +2089,10 @@ async function submitScore() {
             if (currentGame) {
                 initializeDopingCheckboxes(currentGame);
             }
+            // Check for existing scores and update submit button state
+            await checkExistingScoreAndDisableSubmit();
+            // Check tournament results and update regenerate button state
+            await checkTournamentResultsAndDisableRegenerate();
         } else if (result.doping_error) {
             // Show doping error as a popup instead of generic error
             showMessage(result.message, 'error');
@@ -1849,6 +2102,105 @@ async function submitScore() {
     } catch (error) {
         console.error('Error submitting results:', error);
         showMessage('Fout bij het invoeren van resultaten', 'error');
+    }
+}
+
+// Check tournament results and disable regenerate button if needed
+async function checkTournamentResultsAndDisableRegenerate() {
+    const regenerateButton = document.getElementById('regenerateOpponents');
+    if (!regenerateButton) return;
+    
+    try {
+        const response = await fetch('/check_tournament_results');
+        if (response.ok) {
+            const result = await response.json();
+            
+            // Disable button if either Kubb or Petanque has results
+            if (result.kubb_has_results || result.petanque_has_results) {
+                regenerateButton.disabled = true;
+                regenerateButton.textContent = 'Tegenstanders kunnen niet meer gegenereerd worden';
+                regenerateButton.title = 'Er zijn al resultaten ingevoerd voor Kubb of Petanque';
+            } else {
+                regenerateButton.disabled = false;
+                regenerateButton.textContent = 'Nieuwe Tegenstanders Genereren';
+                regenerateButton.title = '';
+            }
+        }
+    } catch (error) {
+        console.error('Error checking tournament results:', error);
+    }
+}
+
+// Check if a score already exists and disable submit button accordingly
+async function checkExistingScoreAndDisableSubmit() {
+    const game = gameSelect.value;
+    if (!game) return;
+    
+    const submitButton = document.querySelector('button[onclick="submitScore()"]');
+    if (!submitButton) return;
+    
+    try {
+        // For stoelendans, check if any result exists (it's a single result for all players)
+        if (game === 'stoelendans') {
+            const response = await fetch('/check_existing_score', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ game: game, player_id: 1 }) // player_id doesn't matter for stoelendans
+            });
+            const result = await response.json();
+            
+            if (result.success && result.exists) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Score al ingevoerd';
+                submitButton.title = 'Er is al een score ingevoerd voor dit spel';
+            } else {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Score Invoeren';
+                submitButton.title = '';
+            }
+            return;
+        }
+        
+        // For other games, check if the selected player already has a score
+        let playerId = null;
+        
+        if (game === 'touwspringen') {
+            const playerSelect = document.getElementById('tsPlayer');
+            if (playerSelect && playerSelect.value) {
+                playerId = parseInt(playerSelect.value);
+            }
+        } else if (game === 'rebus' || game === 'wiskunde') {
+            const playerSelect = document.getElementById('bwPlayer');
+            if (playerSelect && playerSelect.value) {
+                playerId = parseInt(playerSelect.value);
+            }
+        }
+        
+        if (playerId) {
+            const response = await fetch('/check_existing_score', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ game: game, player_id: playerId })
+            });
+            const result = await response.json();
+            
+            if (result.success && result.exists) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Score al ingevoerd';
+                submitButton.title = 'Er is al een score ingevoerd voor deze speler';
+            } else {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Score Invoeren';
+                submitButton.title = '';
+            }
+        } else {
+            // No player selected, disable submit button
+            submitButton.disabled = true;
+            submitButton.textContent = 'Score Invoeren';
+            submitButton.title = 'Selecteer eerst een speler';
+        }
+    } catch (error) {
+        console.error('Error checking existing score:', error);
     }
 }
 

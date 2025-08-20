@@ -60,7 +60,7 @@ opponents = {}
 results = {}
 # New: admin-provided answer keys for brain games
 answer_keys = {
-    'rebus': ['Rock Brakel', 'Overbevolkt', 'Omloop het nieuwsblad', 'Kopgroep', 'de', 'Pelo(p)ton', '59', 'b', '1', 'Henri,Maya,Ona,Esmee'],
+    'rebus': ['Rock Brakel', 'Overbevolkt', 'Omloop het nieuwsblad', 'Kopgroep', 'de', 'Peloton', '59', 'b', '1', 'Henri,Maya,Ona,Esmee'],
     'wiskunde': []
 }
 # Track dismissed winner popups
@@ -893,10 +893,10 @@ def submit_game_results():
             player_id = int(data.get('player_id'))
             jumps = int(data.get('jumps'))
             doping = data.get('doping', False)
-            # Check if player already has a score
+            # Check if player already has a score for this game
             if str(player_id) in results['touwspringen'] or player_id in results['touwspringen']:
                 if not overwrite:
-                    return jsonify({'success': False, 'needs_overwrite': True, 'message': 'Er bestaat al een score voor deze speler'}), 409
+                    return jsonify({'success': False, 'needs_overwrite': True, 'message': 'Er bestaat al een score voor deze speler voor dit spel'}), 409
             results['touwspringen'][player_id] = jumps
             # Track doping usage
             if doping:
@@ -941,14 +941,36 @@ def submit_game_results():
             if time_seconds_total is None:
                 return jsonify({'success': False, 'message': 'Totale tijd is verplicht'}), 400
             
-            # Check if player already has a result
+            # Check if player already has a result for this game
             if str(player_id) in results[game] or player_id in results[game]:
                 if not overwrite:
-                    return jsonify({'success': False, 'needs_overwrite': True, 'message': 'Er bestaat al een resultaat voor deze speler'}), 409
+                    return jsonify({'success': False, 'needs_overwrite': True, 'message': 'Er bestaat al een resultaat voor deze speler voor dit spel'}), 409
+            
+            # Calculate correct answers for popup display
+            correct_answers = 0
+            if game in answer_keys and len(answers) == len(answer_keys[game]):
+                for i, (user_answer, correct_answer) in enumerate(zip(answers, answer_keys[game])):
+                    if game == 'rebus' and i == 9:  # Special handling for rebus question 10
+                        # Split the comma-separated answers
+                        user_parts = [part.strip().lower() for part in user_answer.split(',')]
+                        correct_parts = [part.strip().lower() for part in correct_answer.split(',')]
+                        if len(user_parts) == len(correct_parts) and all(u in correct_parts for u in user_parts):
+                            correct_answers += 1
+                    elif game == 'wiskunde' and i in [0, 1]:  # Special handling for wiskunde questions 1 and 2
+                        # Split the comma-separated answers
+                        user_parts = [part.strip().lower() for part in user_answer.split(',')]
+                        correct_parts = [part.strip().lower() for part in correct_answer.split(',')]
+                        if len(user_parts) == len(correct_parts) and all(u in correct_parts for u in user_parts):
+                            correct_answers += 1
+                    else:
+                        # Case-insensitive comparison for other answers
+                        if user_answer.strip().lower() == correct_answer.strip().lower():
+                            correct_answers += 1
             
             results[game][player_id] = {
                 'answers': answers,
-                'time_seconds_total': float(time_seconds_total)
+                'time_seconds_total': float(time_seconds_total),
+                'correct_answers': correct_answers  # Store for popup display
             }
             # Track doping usage
             if doping:
@@ -966,7 +988,8 @@ def submit_game_results():
                 if excluded_id not in results[game]:
                     results[game][excluded_id] = {
                         'answers': [''] * 10,  # Empty answers
-                        'time_seconds_total': 0.0  # Zero time
+                        'time_seconds_total': 0.0,  # Zero time
+                        'correct_answers': 0
                     }
         else:
             return jsonify({'success': False, 'message': 'Onbekend spel'}), 400
@@ -974,6 +997,17 @@ def submit_game_results():
         return jsonify({'success': False, 'message': 'Ongeldige waarden'}), 400
 
     save_data()
+    
+    # Return additional info for brain games popup
+    if game in ['rebus', 'wiskunde']:
+        player_result = results[game][player_id]
+        return jsonify({
+            'success': True, 
+            'message': 'Resultaten succesvol opgeslagen',
+            'correct_answers': player_result.get('correct_answers', 0),
+            'time': player_result.get('time_seconds_total', 0)
+        })
+    
     return jsonify({'success': True, 'message': 'Resultaten succesvol opgeslagen'})
 
 @app.route('/admin/set_answer_key', methods=['POST'])
@@ -1226,6 +1260,83 @@ def dismiss_winner():
     dismissed_winners.add(category)
     
     return jsonify({'success': True})
+
+@app.route('/check_existing_score', methods=['POST'])
+def check_existing_score():
+    """Check if a score already exists for a player/game combination"""
+    load_data()
+    data = request.get_json()
+    game = data.get('game')
+    player_id = data.get('player_id')
+    
+    if not game or player_id is None:
+        return jsonify({'success': False, 'message': 'Game and player_id are required'}), 400
+    
+    player_id = int(player_id)
+    exists = False
+    
+    if game == 'touwspringen':
+        exists = str(player_id) in results['touwspringen'] or player_id in results['touwspringen']
+    elif game == 'stoelendans':
+        # For stoelendans, check if any ordering exists (it's a single result for all players)
+        exists = len(results['stoelendans']) > 0
+    elif game in ['rebus', 'wiskunde']:
+        exists = str(player_id) in results[game] or player_id in results[game]
+    elif game in ['petanque', 'kubb']:
+        # For tournament games, check if player has participated in any matches
+        exists = False
+        if game in tournaments:
+            for round_matches in tournaments[game]['rounds']:
+                for match in round_matches:
+                    if match['player1'] == player_id or match['player2'] == player_id:
+                        if match['completed']:
+                            exists = True
+                            break
+                if exists:
+                    break
+    
+    return jsonify({
+        'success': True,
+        'exists': exists,
+        'game': game,
+        'player_id': player_id
+    })
+
+@app.route('/check_tournament_results')
+def check_tournament_results():
+    """Check if there are any results for Kubb or Petanque tournaments"""
+    load_data()
+    
+    kubb_has_results = False
+    petanque_has_results = False
+    
+    # Check Kubb results
+    if 'kubb' in tournaments:
+        for round_matches in tournaments['kubb']['rounds']:
+            for match in round_matches:
+                # Only count as result if it's completed AND not a bye match
+                if match['completed'] and match['player2'] is not None:
+                    kubb_has_results = True
+                    break
+            if kubb_has_results:
+                break
+    
+    # Check Petanque results
+    if 'petanque' in tournaments:
+        for round_matches in tournaments['petanque']['rounds']:
+            for match in round_matches:
+                # Only count as result if it's completed AND not a bye match
+                if match['completed'] and match['player2'] is not None:
+                    petanque_has_results = True
+                    break
+            if petanque_has_results:
+                break
+    
+    return jsonify({
+        'success': True,
+        'kubb_has_results': kubb_has_results,
+        'petanque_has_results': petanque_has_results
+    })
 
 if __name__ == '__main__':
     load_data()
