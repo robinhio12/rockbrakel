@@ -742,11 +742,8 @@ async function renderDynamicFields() {
     // Reload doping usage data
     await loadDopingUsage();
 
-    // Filter out Robin and Arnaud for Wiskunde and Rebus games
+    // Use all players for all games
     let filteredPlayers = players;
-    if (game === 'wiskunde' || game === 'rebus') {
-        filteredPlayers = players.filter(p => p.name !== 'Robin' && p.name !== 'Arnaud');
-    }
     
             // Initialize doping checkboxes after loading doping usage data
         // Note: For tournament games, this will be called after the tournament fields are rendered

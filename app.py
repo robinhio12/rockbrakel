@@ -977,20 +977,6 @@ def submit_game_results():
                 if player_id in doping_usage:
                     return jsonify({'success': False, 'doping_error': True, 'message': f'Speler heeft al doping gebruikt voor {doping_usage[player_id]}'}), 200
                 doping_usage[player_id] = game
-            
-            # Automatically set Robin and Arnaud's scores to 0 for these games
-            robin_arnaud_ids = []
-            for player in players:
-                if player['name'] in ['Robin', 'Arnaud']:
-                    robin_arnaud_ids.append(player['id'])
-            
-            for excluded_id in robin_arnaud_ids:
-                if excluded_id not in results[game]:
-                    results[game][excluded_id] = {
-                        'answers': [''] * 10,  # Empty answers
-                        'time_seconds_total': 0.0,  # Zero time
-                        'correct_answers': 0
-                    }
         else:
             return jsonify({'success': False, 'message': 'Onbekend spel'}), 400
     except (TypeError, ValueError):

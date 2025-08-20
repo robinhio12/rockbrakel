@@ -20,13 +20,7 @@
     "registered_at": "2025-08-15T08:48:18.076474",
     "picture": "player_3.png"
   },
-  {
-    "id": 4,
-    "name": "Arnaud",
-    "number": 4,
-    "registered_at": "2025-08-15T08:48:26.055018",
-    "picture": "player_4.png"
-  },
+
   {
     "id": 5,
     "name": "Fred",
@@ -55,13 +49,7 @@
     "registered_at": "2025-08-15T08:49:05.169896",
     "picture": "player_8.png"
   },
-  {
-    "id": 10,
-    "name": "Robin",
-    "number": 10,
-    "registered_at": "2025-08-15T08:49:18.044357",
-    "picture": "player_10.png"
-  },
+
   {
     "id": 11,
     "name": "Jolien",
