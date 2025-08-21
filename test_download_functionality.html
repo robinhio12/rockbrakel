@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Download Functionality</title>
+    <link rel="stylesheet" href="static/styles.css">
+    <style>
+        body {
+            padding: 2rem;
+            font-family: Arial, sans-serif;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .test-button {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            margin: 1rem 0;
+            display: block;
+            width: 100%;
+        }
+        .test-button:hover {
+            background: #e55a2b;
+        }
+        .info-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .info-box h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .info-box ul {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+        .info-box li {
+            margin: 0.25rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Test Download Functionality</h1>
+        
+        <div class="info-box">
+            <h3>Wat wordt er gedownload?</h3>
+            <ul>
+                <li><strong>Spelers:</strong> Alle geregistreerde spelers met hun gegevens</li>
+                <li><strong>Resultaten:</strong> Alle game resultaten per speler</li>
+                <li><strong>Doping gebruik:</strong> Welke spelers doping hebben gebruikt en voor welk spel</li>
+                <li><strong>Toernooien:</strong> Alle toernooi wedstrijden voor Kubb en Petanque</li>
+                <li><strong>Antwoorden:</strong> De correcte antwoorden voor rebus en wiskunde</li>
+                <li><strong>Ranglijsten:</strong> Alle huidige ranglijsten (gele, groene, bolletjes, witte trui)</li>
+            </ul>
+        </div>
+
+        <button class="test-button" onclick="testDownload()">
+            📥 Test Download Alle Data
+        </button>
+
+        <div class="info-box">
+            <h3>Hoe te testen:</h3>
+            <ol>
+                <li>Klik op de download knop hierboven</li>
+                <li>Het bestand wordt automatisch gedownload als JSON</li>
+                <li>Open het bestand in een teksteditor om de inhoud te bekijken</li>
+                <li>Het bestand bevat alle data in gestructureerd JSON formaat</li>
+            </ol>
+        </div>
+
+        <div class="info-box">
+            <h3>Bestandsnaam format:</h3>
+            <p><code>rock_brakel_results_YYYYMMDD_HHMMSS.json</code></p>
+            <p>Bijvoorbeeld: <code>rock_brakel_results_20241201_143022.json</code></p>
+        </div>
+    </div>
+
+    <script>
+        async function testDownload() {
+            try {
+                console.log('Starting download test...');
+                
+                // Create a link element
+                const link = document.createElement('a');
+                link.href = '/download_results';
+                link.download = '';
+                
+                // Add to DOM, click, and remove
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                console.log('Download initiated successfully');
+                alert('Download gestart! Controleer je downloads map.');
+                
+            } catch (error) {
+                console.error('Download error:', error);
+                alert('Download mislukt: ' + error.message);
+            }
+        }
+
+        // Also test the actual download endpoint
+        async function testDownloadEndpoint() {
+            try {
+                const response = await fetch('/download_results');
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Download endpoint works, data structure:', Object.keys(data));
+                    return true;
+                } else {
+                    console.error('Download endpoint failed:', response.status);
+                    return false;
+                }
+            } catch (error) {
+                console.error('Download endpoint error:', error);
+                return false;
+            }
+        }
+
+        // Test the endpoint when page loads
+        window.addEventListener('load', () => {
+            testDownloadEndpoint();
+        });
+    </script>
+</body>
+</html>

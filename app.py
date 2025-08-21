@@ -179,6 +179,26 @@ def _ensure_answer_keys():
     answer_keys.setdefault('rebus', [])
     answer_keys.setdefault('wiskunde', [])
 
+def normalize_answer(answer):
+    """
+    Normalize an answer by removing all extra whitespace and converting to lowercase.
+    This ensures answers are correct regardless of the number of spaces.
+    """
+    if answer is None:
+        return ""
+    # Convert to string, remove all extra whitespace, and convert to lowercase
+    return ' '.join(str(answer).split()).lower()
+
+def normalize_comma_separated_answers(answer):
+    """
+    Normalize comma-separated answers by handling spaces around commas and individual answers.
+    """
+    if answer is None:
+        return []
+    # Split by comma, normalize each part, and filter out empty parts
+    parts = [normalize_answer(part) for part in str(answer).split(',')]
+    return [part for part in parts if part]  # Remove empty parts
+
 def _compute_positions_from_results():
     """Compute per-game positions (1..N) from raw results."""
     _ensure_results_structures()
@@ -238,37 +258,37 @@ def _compute_positions_from_results():
                             if i == 0 and game == 'wiskunde':  # Question 1 for wiskunde (x,y)
                                 # Handle x,y values for question 1
                                 if str(a).strip() and str(b).strip():
-                                    user_answers = str(a).split(',')
-                                    correct_answers = str(b).split(',')
+                                    user_answers = normalize_comma_separated_answers(a)
+                                    correct_answers = normalize_comma_separated_answers(b)
                                     if len(user_answers) == 2 and len(correct_answers) == 2:
                                         # Check if both x and y are correct
-                                        if (user_answers[0].strip().lower() == correct_answers[0].strip().lower() and
-                                            user_answers[1].strip().lower() == correct_answers[1].strip().lower()):
+                                        if (user_answers[0] == correct_answers[0] and
+                                            user_answers[1] == correct_answers[1]):
                                             correct_count += 1
                             elif i == 1 and game == 'wiskunde':  # Question 2 for wiskunde (x,W(x))
                                 # Handle x,W(x) values for question 2
                                 if str(a).strip() and str(b).strip():
-                                    user_answers = str(a).split(',')
-                                    correct_answers = str(b).split(',')
+                                    user_answers = normalize_comma_separated_answers(a)
+                                    correct_answers = normalize_comma_separated_answers(b)
                                     if len(user_answers) == 2 and len(correct_answers) == 2:
                                         # Check if both x and W(x) are correct
-                                        if (user_answers[0].strip().lower() == correct_answers[0].strip().lower() and
-                                            user_answers[1].strip().lower() == correct_answers[1].strip().lower()):
+                                        if (user_answers[0] == correct_answers[0] and
+                                            user_answers[1] == correct_answers[1]):
                                             correct_count += 1
                             elif i == 9 and game == 'rebus':  # Question 10 for rebus
                                 # Handle multiple answers for question 10
                                 if str(a).strip() and str(b).strip():
-                                    user_answers = str(a).split(',')
-                                    correct_answers = str(b).split(',')
+                                    user_answers = normalize_comma_separated_answers(a)
+                                    correct_answers = normalize_comma_separated_answers(b)
                                     if len(user_answers) == 4 and len(correct_answers) == 4:
                                         # Check if all 4 answers are correct (order doesn't matter)
-                                        user_set = set(ans.strip().lower() for ans in user_answers)
-                                        correct_set = set(ans.strip().lower() for ans in correct_answers)
+                                        user_set = set(user_answers)
+                                        correct_set = set(correct_answers)
                                         if user_set == correct_set:
                                             correct_count += 1
                             else:
                                 # Normal answer comparison
-                                if str(a).strip().lower() == str(b).strip().lower():
+                                if normalize_answer(a) == normalize_answer(b):
                                     correct_count += 1
                     # Fallback legacy fields
                     if 'correct' in data:
@@ -951,20 +971,26 @@ def submit_game_results():
             if game in answer_keys and len(answers) == len(answer_keys[game]):
                 for i, (user_answer, correct_answer) in enumerate(zip(answers, answer_keys[game])):
                     if game == 'rebus' and i == 9:  # Special handling for rebus question 10
-                        # Split the comma-separated answers
-                        user_parts = [part.strip().lower() for part in user_answer.split(',')]
-                        correct_parts = [part.strip().lower() for part in correct_answer.split(',')]
-                        if len(user_parts) == len(correct_parts) and all(u in correct_parts for u in user_parts):
-                            correct_answers += 1
+                        # Handle multiple answers for question 10
+                        user_parts = normalize_comma_separated_answers(user_answer)
+                        correct_parts = normalize_comma_separated_answers(correct_answer)
+                        if len(user_parts) == 4 and len(correct_parts) == 4:
+                            # Check if all 4 answers are correct (order doesn't matter)
+                            user_set = set(user_parts)
+                            correct_set = set(correct_parts)
+                            if user_set == correct_set:
+                                correct_answers += 1
                     elif game == 'wiskunde' and i in [0, 1]:  # Special handling for wiskunde questions 1 and 2
-                        # Split the comma-separated answers
-                        user_parts = [part.strip().lower() for part in user_answer.split(',')]
-                        correct_parts = [part.strip().lower() for part in correct_answer.split(',')]
-                        if len(user_parts) == len(correct_parts) and all(u in correct_parts for u in user_parts):
-                            correct_answers += 1
+                        # Handle comma-separated answers for questions 1 and 2
+                        user_parts = normalize_comma_separated_answers(user_answer)
+                        correct_parts = normalize_comma_separated_answers(correct_answer)
+                        if len(user_parts) == 2 and len(correct_parts) == 2:
+                            # Check if both parts are correct
+                            if user_parts[0] == correct_parts[0] and user_parts[1] == correct_parts[1]:
+                                correct_answers += 1
                     else:
-                        # Case-insensitive comparison for other answers
-                        if user_answer.strip().lower() == correct_answer.strip().lower():
+                        # Normal answer comparison
+                        if normalize_answer(user_answer) == normalize_answer(correct_answer):
                             correct_answers += 1
             
             results[game][player_id] = {
@@ -1367,6 +1393,45 @@ def check_tournament_results():
         'can_regenerate_kubb': not kubb_has_results,
         'can_regenerate_petanque': not petanque_has_results
     })
+
+@app.route('/download_results')
+def download_results():
+    """Download all results, doping usage, and tournament matches as JSON"""
+    load_data()
+    
+    # Create comprehensive data export
+    export_data = {
+        'export_info': {
+            'timestamp': datetime.now().isoformat(),
+            'version': '1.0',
+            'description': 'Complete export of all Rock Brakel game data'
+        },
+        'players': players,
+        'results': results,
+        'doping_usage': doping_usage,
+        'tournaments': tournaments,
+        'answer_keys': answer_keys,
+        'rankings': {
+            'gele_trui': calculate_ranking(),
+            'groene_trui': calculate_category_ranking('speed_games'),
+            'bolletjes_trui': calculate_category_ranking('ball_games'),
+            'witte_trui': calculate_category_ranking('brain_games')
+        }
+    }
+    
+    # Generate filename with timestamp
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'rock_brakel_results_{timestamp}.json'
+    
+    # Create response with JSON data
+    from flask import Response
+    response = Response(
+        json.dumps(export_data, ensure_ascii=False, indent=2),
+        mimetype='application/json',
+        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    )
+    
+    return response
 
 if __name__ == '__main__':
     load_data()

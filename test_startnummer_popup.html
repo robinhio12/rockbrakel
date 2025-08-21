@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Startnummer Conflict Popup</title>
+    <link rel="stylesheet" href="static/styles.css">
+    <style>
+        body {
+            padding: 2rem;
+            font-family: Arial, sans-serif;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .test-button {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            margin: 1rem 0;
+            transition: all 0.2s ease;
+        }
+        .test-button:hover {
+            background: #f7931e;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Test Startnummer Conflict Popup</h1>
+        <p>Deze pagina test de nieuwe startnummer conflict popup functionaliteit.</p>
+        
+        <h2>Test Opties:</h2>
+        <button class="test-button" onclick="testStartnummerConflict('123')">Test Startnummer 123 Conflict</button>
+        <button class="test-button" onclick="testStartnummerConflict('456')">Test Startnummer 456 Conflict</button>
+        <button class="test-button" onclick="testStartnummerConflict('789')">Test Startnummer 789 Conflict</button>
+        
+        <h2>Wat wordt getest:</h2>
+        <ul>
+            <li>Popup verschijnt met duidelijke waarschuwing</li>
+            <li>Animaties werken correct</li>
+            <li>Close button werkt</li>
+            <li>Click outside to close werkt</li>
+            <li>OK button werkt</li>
+            <li>Focus gaat terug naar number input</li>
+            <li>Dark mode styling (indien beschikbaar)</li>
+        </ul>
+        
+        <h2>Simulatie van Player Registration:</h2>
+        <div style="margin: 2rem 0; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+            <label for="testNumber">Startnummer:</label>
+            <input type="number" id="testNumber" placeholder="Voer een startnummer in" style="margin-left: 1rem; padding: 0.5rem;">
+        </div>
+    </div>
+
+    <script>
+        // Simulate the startnummer conflict popup
+        function showStartnummerConflictPopup(startnummer) {
+            const backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop startnummer-conflict-backdrop';
+            const modal = document.createElement('div');
+            modal.className = 'modal startnummer-conflict-modal';
+            modal.innerHTML = `
+                <div class="modal-header">
+                    <h4>⚠️ Startnummer Conflict</h4>
+                    <button id="startnummerConflictClose" class="modal-close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="conflict-icon">🚫</div>
+                    <h5>Startnummer ${startnummer} is al in gebruik!</h5>
+                    <p>Elk startnummer moet uniek zijn. Kies een ander startnummer om door te gaan met de registratie.</p>
+                    <div class="conflict-details">
+                        <strong>Wat moet je doen?</strong>
+                        <ul>
+                            <li>Kies een ander startnummer dat nog niet gebruikt wordt</li>
+                            <li>Controleer de lijst met geregistreerde spelers</li>
+                            <li>Probeer opnieuw te registreren</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button id="startnummerConflictOk" class="btn btn-primary">Ik begrijp het</button>
+                </div>
+            `;
+            backdrop.appendChild(modal);
+            document.body.appendChild(backdrop);
+            
+            const cleanup = () => {
+                backdrop.classList.add('fade-out');
+                setTimeout(() => {
+                    if (backdrop.parentNode) {
+                        backdrop.remove();
+                    }
+                }, 300);
+            };
+            
+            // Close button event
+            const closeBtn = modal.querySelector('#startnummerConflictClose');
+            closeBtn.addEventListener('click', cleanup);
+            
+            // OK button event
+            const okBtn = modal.querySelector('#startnummerConflictOk');
+            okBtn.addEventListener('click', cleanup);
+            
+            // Click outside to close
+            backdrop.addEventListener('click', (e) => {
+                if (e.target === backdrop) {
+                    cleanup();
+                }
+            });
+            
+            // Focus on the number input after popup closes
+            setTimeout(() => {
+                const numberInput = document.getElementById('testNumber');
+                if (numberInput) {
+                    numberInput.focus();
+                    numberInput.select();
+                }
+            }, 350);
+        }
+        
+        function testStartnummerConflict(startnummer) {
+            showStartnummerConflictPopup(startnummer);
+        }
+        
+        // Add dark mode toggle for testing
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+        
+        // Add dark mode toggle button
+        const darkModeBtn = document.createElement('button');
+        darkModeBtn.textContent = '🌙 Toggle Dark Mode';
+        darkModeBtn.className = 'test-button';
+        darkModeBtn.style.background = '#2c3e50';
+        darkModeBtn.onclick = toggleDarkMode;
+        document.querySelector('.test-container').appendChild(darkModeBtn);
+    </script>
+</body>
+</html>

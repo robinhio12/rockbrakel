@@ -1,4 +1,102 @@
 {
-  "petanque": [],
-  "kubb": []
+  "petanque": [
+    {
+      "player1": 13,
+      "player1_name": "Thibaut",
+      "player1_number": 13,
+      "player2": 1,
+      "player2_name": "Josefien",
+      "player2_number": 1
+    },
+    {
+      "player1": 14,
+      "player1_name": "Bart",
+      "player1_number": 69,
+      "player2": 2,
+      "player2_name": "Jens",
+      "player2_number": 2
+    },
+    {
+      "player1": 6,
+      "player1_name": "Margot",
+      "player1_number": 6,
+      "player2": 5,
+      "player2_name": "Fred",
+      "player2_number": 5
+    },
+    {
+      "player1": 8,
+      "player1_name": "Natan",
+      "player1_number": 8,
+      "player2": 3,
+      "player2_name": "Cynthia",
+      "player2_number": 3
+    },
+    {
+      "player1": 12,
+      "player1_name": "Nina",
+      "player1_number": 12,
+      "player2": 11,
+      "player2_name": "Jolien",
+      "player2_number": 11
+    },
+    {
+      "player1": 7,
+      "player1_name": "Bram",
+      "player1_number": 7,
+      "player2": null,
+      "player2_name": "BYE",
+      "player2_number": null
+    }
+  ],
+  "kubb": [
+    {
+      "player1": 11,
+      "player1_name": "Jolien",
+      "player1_number": 11,
+      "player2": 14,
+      "player2_name": "Bart",
+      "player2_number": 69
+    },
+    {
+      "player1": 2,
+      "player1_name": "Jens",
+      "player1_number": 2,
+      "player2": 5,
+      "player2_name": "Fred",
+      "player2_number": 5
+    },
+    {
+      "player1": 8,
+      "player1_name": "Natan",
+      "player1_number": 8,
+      "player2": 6,
+      "player2_name": "Margot",
+      "player2_number": 6
+    },
+    {
+      "player1": 3,
+      "player1_name": "Cynthia",
+      "player1_number": 3,
+      "player2": 12,
+      "player2_name": "Nina",
+      "player2_number": 12
+    },
+    {
+      "player1": 1,
+      "player1_name": "Josefien",
+      "player1_number": 1,
+      "player2": 13,
+      "player2_name": "Thibaut",
+      "player2_number": 13
+    },
+    {
+      "player1": 7,
+      "player1_name": "Bram",
+      "player1_number": 7,
+      "player2": null,
+      "player2_name": "BYE",
+      "player2_number": null
+    }
+  ]
 }

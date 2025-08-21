@@ -51,6 +51,27 @@ document.addEventListener('DOMContentLoaded', async function() {
         regenerateOpponentsBtn.addEventListener('click', regenerateOpponents);
     }
 
+    // Download results button
+    const downloadBtn = document.getElementById('downloadResults');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', async () => {
+            try {
+                showMessage('Data wordt voorbereid voor download...', 'info');
+                // Trigger download by creating a link and clicking it
+                const link = document.createElement('a');
+                link.href = '/download_results';
+                link.download = '';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showMessage('Download gestart!', 'success');
+            } catch (e) {
+                showMessage('Download mislukt', 'error');
+                console.error('Download error:', e);
+            }
+        });
+    }
+
     // Clear results button
     const clearBtn = document.getElementById('clearResults');
     if (clearBtn) {
@@ -722,7 +743,12 @@ async function registerPlayer() {
             await loadPlayers();
             await loadOpponents();
         } else {
-            showMessage(result.message, 'error');
+            // Check if it's a startnummer conflict and show special popup
+            if (result.message && result.message.includes('startnummer') && result.message.includes('gebruik')) {
+                showStartnummerConflictPopup(number);
+            } else {
+                showMessage(result.message, 'error');
+            }
         }
     } catch (error) {
         console.error('Error registering player:', error);
@@ -899,6 +925,10 @@ async function renderDynamicFields() {
             
             <div class="questions-section">
                 <h4>Wiskunde Vragen</h4>
+                <p>Machten moeten geschreven worden als x^2, x^3, etc. </p>
+                <p>De deling moet geschreven worden als 1/2.</p>
+                <p>Vermenigvuldigen moet geschreven worden als 3*2 of 3*x./p>
+                <p>Vergeet geen haakjes!</p>
                 
                 <div class="question-item">
                     <h5>Oefening 1. Algebra — Eenvoudig stelsel</h5>
@@ -1147,19 +1177,19 @@ async function renderDynamicFields() {
                     <img src="/static/rebus_images/vraag 10.png" alt="Rebus 10" class="rebus-image">
                     <div class="form-group">
                         <label>Snoepjesbox:</label>
-                        <input id="ans10a" type="text" placeholder="Henri, Maya, Ona, of Esmee">
+                        <input id="ans10a" type="text" placeholder="Ona, Henri, Maya, of Esmee">
                     </div>
                     <div class="form-group">
                         <label>Animator:</label>
-                        <input id="ans10b" type="text" placeholder="Henri, Maya, Ona, of Esmee">
+                        <input id="ans10b" type="text" placeholder="Ona, Henri, Maya, of Esmee">
                     </div>
                     <div class="form-group">
                         <label>Fotograaf:</label>
-                        <input id="ans10c" type="text" placeholder="Henri, Maya, Ona, of Esmee">
+                        <input id="ans10c" type="text" placeholder="Ona, Henri, Maya, of Esmee">
                     </div>
                     <div class="form-group">
                         <label>Hartendief:</label>
-                        <input id="ans10d" type="text" placeholder="Henri, Maya, Ona, of Esmee">
+                        <input id="ans10d" type="text" placeholder="Ona, Henri, Maya, of Esmee">
                     </div>
                 </div>
             </div>
@@ -1609,6 +1639,71 @@ function showConfirmationPopup(message) {
     });
 }
 
+// Show startnummer conflict popup
+function showStartnummerConflictPopup(startnummer) {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop startnummer-conflict-backdrop';
+    const modal = document.createElement('div');
+    modal.className = 'modal startnummer-conflict-modal';
+    modal.innerHTML = `
+        <div class="modal-header">
+            <h4>⚠️ Startnummer Conflict</h4>
+            <button id="startnummerConflictClose" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="conflict-icon">🚫</div>
+            <h5>Startnummer ${startnummer} is al in gebruik!</h5>
+            <p>Elk startnummer moet uniek zijn. Kies een ander startnummer om door te gaan met de registratie.</p>
+            <div class="conflict-details">
+                <strong>Wat moet je doen?</strong>
+                <ul>
+                    <li>Kies een ander startnummer dat nog niet gebruikt wordt</li>
+                    <li>Controleer de lijst met geregistreerde spelers</li>
+                    <li>Probeer opnieuw te registreren</li>
+                </ul>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button id="startnummerConflictOk" class="btn btn-primary">Ik begrijp het</button>
+        </div>
+    `;
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+    
+    const cleanup = () => {
+        backdrop.classList.add('fade-out');
+        setTimeout(() => {
+            if (backdrop.parentNode) {
+                backdrop.remove();
+            }
+        }, 300);
+    };
+    
+    // Close button event
+    const closeBtn = modal.querySelector('#startnummerConflictClose');
+    closeBtn.addEventListener('click', cleanup);
+    
+    // OK button event
+    const okBtn = modal.querySelector('#startnummerConflictOk');
+    okBtn.addEventListener('click', cleanup);
+    
+    // Click outside to close
+    backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) {
+            cleanup();
+        }
+    });
+    
+    // Focus on the number input after popup closes
+    setTimeout(() => {
+        const numberInput = document.getElementById('playerNumber');
+        if (numberInput) {
+            numberInput.focus();
+            numberInput.select();
+        }
+    }, 350);
+}
+
 // Regenerate opponents
 async function regenerateOpponents() {
     try {
@@ -1935,6 +2030,56 @@ function closeCountdownModal() {
     }
 }
 
+// Function to clear all form fields after successful submission
+function clearFormFields(game) {
+    if (game === 'touwspringen') {
+        // Clear touwspringen fields
+        const tsPlayer = document.getElementById('tsPlayer');
+        const tsJumps = document.getElementById('tsJumps');
+        const tsDoping = document.getElementById('tsDoping');
+        
+        if (tsPlayer) tsPlayer.value = '';
+        if (tsJumps) tsJumps.value = '';
+        if (tsDoping) tsDoping.checked = false;
+        
+    } else if (game === 'rebus' || game === 'wiskunde') {
+        // Clear brain game fields
+        const bwPlayer = document.getElementById('bwPlayer');
+        const bwDoping = document.getElementById('bwDoping');
+        
+        if (bwPlayer) bwPlayer.value = '';
+        if (bwDoping) bwDoping.checked = false;
+        
+        // Clear regular answer fields (ans1-ans10)
+        for (let i = 1; i <= 10; i++) {
+            const field = document.getElementById(`ans${i}`);
+            if (field) {
+                field.value = '';
+            }
+        }
+        
+        // Clear wiskunde special fields (ans1_x, ans1_y, ans2_x, ans2_wx)
+        const wiskundeFields = ['ans1_x', 'ans1_y', 'ans2_x', 'ans2_wx'];
+        wiskundeFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.value = '';
+            }
+        });
+        
+        // Clear rebus question 10 fields (ans10a, ans10b, ans10c, ans10d)
+        const rebusFields = ['ans10a', 'ans10b', 'ans10c', 'ans10d'];
+        rebusFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.value = '';
+            }
+        });
+    }
+    // Note: stoelendans fields are not cleared as they represent the final ranking
+    // Note: tournament games (petanque, kubb) are handled separately
+}
+
 // Modify submitScore to handle automatic time calculation for Wiskunde and Rebus
 async function submitScore() {
     const game = gameSelect.value;
@@ -2080,6 +2225,9 @@ async function submitScore() {
         let result = await response.json();
         if (response.ok && result.success) {
             showMessage(result.message, 'success');
+            
+            // Clear form fields after successful submission
+            clearFormFields(game);
             
             // Show popup for brain games with correct answers and time
             if ((game === 'rebus' || game === 'wiskunde') && result.correct_answers !== undefined && result.time !== undefined) {

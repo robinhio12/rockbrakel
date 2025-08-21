@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Form Clearing Functionality</title>
+    <link rel="stylesheet" href="static/styles.css">
+    <style>
+        body {
+            padding: 2rem;
+            font-family: Arial, sans-serif;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .test-section {
+            margin: 2rem 0;
+            padding: 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+        }
+        .test-button {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0.5rem;
+        }
+        .test-button:hover {
+            background: #e55a2b;
+        }
+        .form-group {
+            margin: 1rem 0;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+        }
+        .info-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .status {
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Test Form Clearing Functionality</h1>
+        
+        <div class="info-box">
+            <h3>Wat wordt er getest?</h3>
+            <ul>
+                <li><strong>Touwspringen:</strong> Player select, jumps input, doping checkbox</li>
+                <li><strong>Rebus:</strong> Player select, doping checkbox, all answer fields (ans1-ans9, ans10a-d)</li>
+                <li><strong>Wiskunde:</strong> Player select, doping checkbox, all answer fields (ans1_x/y, ans2_x/wx, ans3-ans10)</li>
+                <li><strong>Stoelendans:</strong> Fields are NOT cleared (represents final ranking)</li>
+            </ul>
+        </div>
+
+        <!-- Touwspringen Test -->
+        <div class="test-section">
+            <h3>Touwspringen Form Test</h3>
+            <div class="form-group">
+                <label for="tsPlayer">Speler:</label>
+                <select id="tsPlayer">
+                    <option value="">Selecteer</option>
+                    <option value="1">Speler 1</option>
+                    <option value="2">Speler 2</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="tsJumps">Aantal sprongen:</label>
+                <input id="tsJumps" type="number" min="0" placeholder="0">
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="tsDoping"> Doping gebruiken
+                </label>
+            </div>
+            <button class="test-button" onclick="testTouwspringenClear()">Test Touwspringen Clear</button>
+            <div id="tsStatus"></div>
+        </div>
+
+        <!-- Rebus Test -->
+        <div class="test-section">
+            <h3>Rebus Form Test</h3>
+            <div class="form-group">
+                <label for="bwPlayer">Speler:</label>
+                <select id="bwPlayer">
+                    <option value="">Selecteer</option>
+                    <option value="1">Speler 1</option>
+                    <option value="2">Speler 2</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="bwDoping"> Doping gebruiken
+                </label>
+            </div>
+            <div class="form-group">
+                <label>Antwoorden 1-9:</label>
+                <input id="ans1" type="text" placeholder="antwoord 1">
+                <input id="ans2" type="text" placeholder="antwoord 2">
+                <input id="ans3" type="text" placeholder="antwoord 3">
+                <input id="ans4" type="text" placeholder="antwoord 4">
+                <input id="ans5" type="text" placeholder="antwoord 5">
+                <input id="ans6" type="text" placeholder="antwoord 6">
+                <input id="ans7" type="text" placeholder="antwoord 7">
+                <input id="ans8" type="text" placeholder="antwoord 8">
+                <input id="ans9" type="text" placeholder="antwoord 9">
+            </div>
+            <div class="form-group">
+                <label>Antwoord 10 (4 delen):</label>
+                <input id="ans10a" type="text" placeholder="Ona, Henri, Maya, of Esmee">
+                <input id="ans10b" type="text" placeholder="Ona, Henri, Maya, of Esmee">
+                <input id="ans10c" type="text" placeholder="Ona, Henri, Maya, of Esmee">
+                <input id="ans10d" type="text" placeholder="Ona, Henri, Maya, of Esmee">
+            </div>
+            <button class="test-button" onclick="testRebusClear()">Test Rebus Clear</button>
+            <div id="rebusStatus"></div>
+        </div>
+
+        <!-- Wiskunde Test -->
+        <div class="test-section">
+            <h3>Wiskunde Form Test</h3>
+            <div class="form-group">
+                <label for="bwPlayer2">Speler:</label>
+                <select id="bwPlayer2">
+                    <option value="">Selecteer</option>
+                    <option value="1">Speler 1</option>
+                    <option value="2">Speler 2</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="bwDoping2"> Doping gebruiken
+                </label>
+            </div>
+            <div class="form-group">
+                <label>Vraag 1 (x,y):</label>
+                <input id="ans1_x" type="text" placeholder="x">
+                <input id="ans1_y" type="text" placeholder="y">
+            </div>
+            <div class="form-group">
+                <label>Vraag 2 (x,W(x)):</label>
+                <input id="ans2_x" type="text" placeholder="x">
+                <input id="ans2_wx" type="text" placeholder="W(x)">
+            </div>
+            <div class="form-group">
+                <label>Antwoorden 3-10:</label>
+                <input id="ans3" type="text" placeholder="antwoord 3">
+                <input id="ans4" type="text" placeholder="antwoord 4">
+                <input id="ans5" type="text" placeholder="antwoord 5">
+                <input id="ans6" type="text" placeholder="antwoord 6">
+                <input id="ans7" type="text" placeholder="antwoord 7">
+                <input id="ans8" type="text" placeholder="antwoord 8">
+                <input id="ans9" type="text" placeholder="antwoord 9">
+                <input id="ans10" type="text" placeholder="antwoord 10">
+            </div>
+            <button class="test-button" onclick="testWiskundeClear()">Test Wiskunde Clear</button>
+            <div id="wiskundeStatus"></div>
+        </div>
+
+        <div class="info-box">
+            <h3>Hoe te testen:</h3>
+            <ol>
+                <li>Vul alle velden in met test data</li>
+                <li>Klik op de "Test Clear" knop</li>
+                <li>Controleer of alle velden zijn gewist</li>
+                <li>De status wordt getoond onder elke test sectie</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Mock clearFormFields function for testing
+        function clearFormFields(game) {
+            if (game === 'touwspringen') {
+                // Clear touwspringen fields
+                const tsPlayer = document.getElementById('tsPlayer');
+                const tsJumps = document.getElementById('tsJumps');
+                const tsDoping = document.getElementById('tsDoping');
+                
+                if (tsPlayer) tsPlayer.value = '';
+                if (tsJumps) tsJumps.value = '';
+                if (tsDoping) tsDoping.checked = false;
+                
+            } else if (game === 'rebus' || game === 'wiskunde') {
+                // Clear brain game fields
+                const bwPlayer = document.getElementById('bwPlayer');
+                const bwDoping = document.getElementById('bwDoping');
+                
+                if (bwPlayer) bwPlayer.value = '';
+                if (bwDoping) bwDoping.checked = false;
+                
+                // Clear regular answer fields (ans1-ans10)
+                for (let i = 1; i <= 10; i++) {
+                    const field = document.getElementById(`ans${i}`);
+                    if (field) {
+                        field.value = '';
+                    }
+                }
+                
+                // Clear wiskunde special fields (ans1_x, ans1_y, ans2_x, ans2_wx)
+                const wiskundeFields = ['ans1_x', 'ans1_y', 'ans2_x', 'ans2_wx'];
+                wiskundeFields.forEach(fieldId => {
+                    const field = document.getElementById(fieldId);
+                    if (field) {
+                        field.value = '';
+                    }
+                });
+                
+                // Clear rebus question 10 fields (ans10a, ans10b, ans10c, ans10d)
+                const rebusFields = ['ans10a', 'ans10b', 'ans10c', 'ans10d'];
+                rebusFields.forEach(fieldId => {
+                    const field = document.getElementById(fieldId);
+                    if (field) {
+                        field.value = '';
+                    }
+                });
+            }
+        }
+
+        function testTouwspringenClear() {
+            // Fill with test data first
+            document.getElementById('tsPlayer').value = '1';
+            document.getElementById('tsJumps').value = '50';
+            document.getElementById('tsDoping').checked = true;
+            
+            // Clear after a short delay to simulate submission
+            setTimeout(() => {
+                clearFormFields('touwspringen');
+                
+                // Check if fields are cleared
+                const player = document.getElementById('tsPlayer').value;
+                const jumps = document.getElementById('tsJumps').value;
+                const doping = document.getElementById('tsDoping').checked;
+                
+                const status = document.getElementById('tsStatus');
+                if (player === '' && jumps === '' && !doping) {
+                    status.innerHTML = '<div class="status success">✓ Touwspringen velden succesvol gewist!</div>';
+                } else {
+                    status.innerHTML = '<div class="status error">✗ Fout: velden zijn niet gewist</div>';
+                }
+            }, 500);
+        }
+
+        function testRebusClear() {
+            // Fill with test data first
+            document.getElementById('bwPlayer').value = '2';
+            document.getElementById('bwDoping').checked = true;
+            for (let i = 1; i <= 9; i++) {
+                document.getElementById(`ans${i}`).value = `test${i}`;
+            }
+            document.getElementById('ans10a').value = 'Henri';
+            document.getElementById('ans10b').value = 'Maya';
+            document.getElementById('ans10c').value = 'Ona';
+            document.getElementById('ans10d').value = 'Esmee';
+            
+            // Clear after a short delay to simulate submission
+            setTimeout(() => {
+                clearFormFields('rebus');
+                
+                // Check if fields are cleared
+                const player = document.getElementById('bwPlayer').value;
+                const doping = document.getElementById('bwDoping').checked;
+                let allCleared = (player === '' && !doping);
+                
+                for (let i = 1; i <= 9; i++) {
+                    if (document.getElementById(`ans${i}`).value !== '') {
+                        allCleared = false;
+                    }
+                }
+                
+                const rebusFields = ['ans10a', 'ans10b', 'ans10c', 'ans10d'];
+                rebusFields.forEach(fieldId => {
+                    if (document.getElementById(fieldId).value !== '') {
+                        allCleared = false;
+                    }
+                });
+                
+                const status = document.getElementById('rebusStatus');
+                if (allCleared) {
+                    status.innerHTML = '<div class="status success">✓ Rebus velden succesvol gewist!</div>';
+                } else {
+                    status.innerHTML = '<div class="status error">✗ Fout: velden zijn niet gewist</div>';
+                }
+            }, 500);
+        }
+
+        function testWiskundeClear() {
+            // Fill with test data first
+            document.getElementById('bwPlayer2').value = '1';
+            document.getElementById('bwDoping2').checked = true;
+            document.getElementById('ans1_x').value = '5';
+            document.getElementById('ans1_y').value = '10';
+            document.getElementById('ans2_x').value = '3';
+            document.getElementById('ans2_wx').value = '15';
+            for (let i = 3; i <= 10; i++) {
+                document.getElementById(`ans${i}`).value = `wiskunde${i}`;
+            }
+            
+            // Clear after a short delay to simulate submission
+            setTimeout(() => {
+                clearFormFields('wiskunde');
+                
+                // Check if fields are cleared
+                const player = document.getElementById('bwPlayer2').value;
+                const doping = document.getElementById('bwDoping2').checked;
+                let allCleared = (player === '' && !doping);
+                
+                const wiskundeFields = ['ans1_x', 'ans1_y', 'ans2_x', 'ans2_wx'];
+                wiskundeFields.forEach(fieldId => {
+                    if (document.getElementById(fieldId).value !== '') {
+                        allCleared = false;
+                    }
+                });
+                
+                for (let i = 3; i <= 10; i++) {
+                    if (document.getElementById(`ans${i}`).value !== '') {
+                        allCleared = false;
+                    }
+                }
+                
+                const status = document.getElementById('wiskundeStatus');
+                if (allCleared) {
+                    status.innerHTML = '<div class="status success">✓ Wiskunde velden succesvol gewist!</div>';
+                } else {
+                    status.innerHTML = '<div class="status error">✗ Fout: velden zijn niet gewist</div>';
+                }
+            }, 500);
+        }
+    </script>
+</body>
+</html>

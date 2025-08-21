@@ -1,16 +1,1 @@
-{
-  "petanque": {
-    "rounds": [],
-    "current_round": 0,
-    "final_standings": [],
-    "num_rounds": 0,
-    "bye_players": []
-  },
-  "kubb": {
-    "rounds": [],
-    "current_round": 0,
-    "final_standings": [],
-    "num_rounds": 0,
-    "bye_players": []
-  }
-}
+{}
