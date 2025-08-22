@@ -7,7 +7,7 @@ let gameStartTime = null;
 let gameTimer = null;
 let countdownTimer = null;
 let previousWinners = {}; // Track previous winners for popup notifications
-let openWinnerPopups = new Set(); // Track which jersey popups are currently open
+let dismissedWinners = new Set(); // Track dismissed winners from backend
 
 // DOM elements
 const playerNameInput = document.getElementById('playerName');
@@ -124,9 +124,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     };
     
     // Clear popup tracking (for debugging)
-    window.clearPopupSession = function() {
-        openWinnerPopups.clear();
-        console.log('Popup tracking cleared');
+    window.clearPopupSession = async function() {
+        try {
+            const response = await fetch('/clear_dismissed_winners', { method: 'POST' });
+            if (response.ok) {
+                console.log('Dismissed winners cleared from backend');
+            } else {
+                console.log('Failed to clear dismissed winners');
+            }
+        } catch (error) {
+            console.error('Error clearing dismissed winners:', error);
+        }
     };
     
     // Test score checking (for debugging)
@@ -232,50 +240,30 @@ async function loadRankings() {
 let dopingUsage = {};
 
 // Check for completed rankings and show winner popups
-function checkForNewWinners(rankings) {
-    const jerseyTypes = {
-        'gele_trui': 'Gele Trui',
-        'groene_trui': 'Groene Trui', 
-        'bolletjes_trui': 'Bolletjestrui',
-        'witte_trui': 'Witte Trui'
-    };
-    
-    // Define which games contribute to each jersey
-    const jerseyGames = {
-        'gele_trui': ['touwspringen', 'stoelendans', 'petanque', 'kubb', 'rebus', 'wiskunde'], // All games
-        'groene_trui': ['touwspringen', 'stoelendans'], // Speed games
-        'bolletjes_trui': ['petanque', 'kubb'], // Ball games
-        'witte_trui': ['rebus', 'wiskunde'] // Brain games
-    };
-    
-    // Check each jersey type independently
-    Object.keys(jerseyTypes).forEach(jerseyKey => {
-        if (rankings[jerseyKey] && rankings[jerseyKey].length > 0) {
-            const currentWinner = rankings[jerseyKey][0];
-            
-            // Check if all players have entered scores for the games that contribute to this jersey
-            const gamesForJersey = jerseyGames[jerseyKey];
-            const allScoresEntered = checkAllScoresEntered(gamesForJersey);
-            
-            // Show popup if:
-            // 1. All scores are entered for this ranking
-            // 2. No popup for this specific jersey is currently open
-            if (allScoresEntered && 
-                !openWinnerPopups.has(jerseyKey)) {
+async function checkForNewWinners(rankings) {
+    try {
+        // Get winners from backend (which handles dismissed winners)
+        const response = await fetch('/check_winners');
+        const winners = await response.json();
+        
+        // Show popups for any winners returned by backend
+        Object.keys(winners).forEach(jerseyKey => {
+            const winner = winners[jerseyKey];
+            if (winner) {
+                const jerseyTypes = {
+                    'gele_trui': 'Gele Trui',
+                    'groene_trui': 'Groene Trui', 
+                    'bolletjes_trui': 'Bolletjestrui',
+                    'witte_trui': 'Witte Trui'
+                };
                 
-                const playerName = currentWinner[1].name;
                 const jerseyName = jerseyTypes[jerseyKey];
-                const points = currentWinner[1].points;
-                const playerId = currentWinner[0];
-                
-                // Show popup for winner
-                showWinnerPopup(playerName, jerseyName, points, playerId, jerseyKey);
-                
-                // Mark this popup as open
-                openWinnerPopups.add(jerseyKey);
+                showWinnerPopup(winner.name, jerseyName, winner.points, winner.id, jerseyKey);
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.error('Error checking for winners:', error);
+    }
 }
 
 // Check if all players have entered scores for the specified games
@@ -397,7 +385,7 @@ function showWinnerPopup(playerName, jerseyName, points, playerId, jerseyKey) {
     document.body.insertAdjacentHTML('beforeend', popupHTML);
     
     // Add event listeners to close buttons
-    const closePopup = () => {
+    const closePopup = async () => {
         const popup = document.getElementById(`winnerPopup_${jerseyKey}`);
         if (popup) {
             popup.classList.add('fade-out');
@@ -405,9 +393,20 @@ function showWinnerPopup(playerName, jerseyName, points, playerId, jerseyKey) {
                 if (popup && popup.parentNode) {
                     popup.remove();
                 }
-                // Remove from open popups tracking
-                openWinnerPopups.delete(jerseyKey);
             }, 300);
+            
+            // Notify backend that this winner popup was dismissed
+            try {
+                await fetch('/dismiss_winner', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ category: jerseyKey })
+                });
+            } catch (error) {
+                console.error('Error dismissing winner:', error);
+            }
         }
     };
     
@@ -450,8 +449,7 @@ function showWinnerPopup(playerName, jerseyName, points, playerId, jerseyKey) {
         }
     }, 8000);
     
-    // Track this popup as open
-    openWinnerPopups.add(jerseyKey);
+    // Popup is now shown and will be dismissed via backend when closed
 }
 
 // Show player registration popup

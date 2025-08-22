@@ -89,7 +89,7 @@ doping_usage = {}  # {player_id: game_name} if player has used doping for that g
 
 def load_data():
     """Load data from JSON files if they exist"""
-    global players, scores, opponents, results, answer_keys, tournaments, doping_usage
+    global players, scores, opponents, results, answer_keys, tournaments, doping_usage, dismissed_winners
     
     if os.path.exists('data/players.json'):
         with open('data/players.json', 'r', encoding='utf-8') as f:
@@ -130,6 +130,14 @@ def load_data():
             doping_usage_raw = json.load(f)
             # Convert string keys to integers
             doping_usage = {int(k): v for k, v in doping_usage_raw.items()}
+    
+    # Load dismissed winners data
+    if os.path.exists('data/dismissed_winners.json'):
+        with open('data/dismissed_winners.json', 'r', encoding='utf-8') as f:
+            dismissed_winners_list = json.load(f)
+            dismissed_winners = set(dismissed_winners_list)
+    else:
+        dismissed_winners = set()
 
 def save_data():
     """Save data to JSON files"""
@@ -156,6 +164,10 @@ def save_data():
     # Save doping usage data
     with open('data/doping_usage.json', 'w', encoding='utf-8') as f:
         json.dump(doping_usage, f, ensure_ascii=False, indent=2)
+    
+    # Save dismissed winners data
+    with open('data/dismissed_winners.json', 'w', encoding='utf-8') as f:
+        json.dump(list(dismissed_winners), f, ensure_ascii=False, indent=2)
 
 def _ensure_results_structures():
     """Initialize default structures for results per game."""
@@ -1305,21 +1317,27 @@ def check_winners():
 @app.route('/dismiss_winner', methods=['POST'])
 def dismiss_winner():
     """Mark a winner popup as dismissed so it won't show again"""
+    load_data()
     data = request.get_json()
     category = data.get('category')
     
     if not category:
         return jsonify({'success': False, 'message': 'Category is required'}), 400
     
-    # Store dismissed winners in a simple way (in a real app, you'd use a database)
-    # For now, we'll use a global variable
-    global dismissed_winners
-    if 'dismissed_winners' not in globals():
-        dismissed_winners = set()
-    
+    # Add to dismissed winners and save
     dismissed_winners.add(category)
+    save_data()
     
     return jsonify({'success': True})
+
+@app.route('/clear_dismissed_winners', methods=['POST'])
+def clear_dismissed_winners():
+    """Clear all dismissed winners (for testing purposes)"""
+    load_data()
+    global dismissed_winners
+    dismissed_winners.clear()
+    save_data()
+    return jsonify({'success': True, 'message': 'Dismissed winners cleared'})
 
 @app.route('/check_existing_score', methods=['POST'])
 def check_existing_score():
