@@ -844,8 +844,11 @@ def register_player():
         if any(p['number'] == int(number) for p in players):
             return jsonify({'success': False, 'message': 'Dit startnummer is al in gebruik'})
         
-        # Create new player
-        player_id = len(players) + 1
+        # Create new player with unique ID
+        # Find the highest existing ID and add 1
+        max_id = max([p['id'] for p in players]) if players else 0
+        player_id = max_id + 1
+        
         new_player = {
             'id': player_id,
             'name': name,
@@ -877,8 +880,11 @@ def register_player():
         if any(p['number'] == number for p in players):
             return jsonify({'success': False, 'message': 'Dit startnummer is al in gebruik'})
         
-        # Create new player
-        player_id = len(players) + 1
+        # Create new player with unique ID
+        # Find the highest existing ID and add 1
+        max_id = max([p['id'] for p in players]) if players else 0
+        player_id = max_id + 1
+        
         new_player = {
             'id': player_id,
             'name': name,

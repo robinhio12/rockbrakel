@@ -1248,7 +1248,43 @@ body {
 .winner-close-button:hover {
     background: linear-gradient(135deg, #2980b9, #1f5f8b);
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+    box-shadow: 0 6px 16px rgba(52, 152, 219, 0.4);
+}
+
+/* Player Registration Popup Specific Styles */
+.player-id {
+    color: #6c757d;
+    font-size: 1rem;
+    font-weight: 500;
+    margin: 0 0 1rem 0;
+    background: #f8f9fa;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    display: inline-block;
+    border-left: 4px solid #3498db;
+}
+
+.registration-info {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #e8f5e8, #f0f8f0);
+    border-radius: 12px;
+    border: 1px solid #d4edda;
+}
+
+.registration-info p {
+    margin: 0.5rem 0;
+    color: #155724;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.registration-info p:first-child {
+    margin-top: 0;
+}
+
+.registration-info p:last-child {
+    margin-bottom: 0;
 }
 
 /* Responsive design for winner popup */

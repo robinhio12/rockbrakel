@@ -449,6 +449,107 @@ function showWinnerPopup(playerName, jerseyName, points, playerId, jerseyKey) {
             closePopup();
         }
     }, 8000);
+    
+    // Track this popup as open
+    openWinnerPopups.add(jerseyKey);
+}
+
+// Show player registration popup
+function showPlayerRegistrationPopup(player) {
+    const playerPictureUrl = player && player.picture ? `/player_picture/${player.picture}` : '/static/player_pictures/player_1.png';
+    const popupId = `playerRegistration_${Date.now()}`;
+    
+    // Create popup HTML
+    const popupHTML = `
+        <div id="${popupId}" class="modal-backdrop winner-popup-backdrop">
+            <div class="modal winner-modal">
+                <div class="winner-content">
+                    <div class="winner-header">
+                        <h2>👤 Nieuwe Speler Geregistreerd! 👤</h2>
+                        <button id="${popupId}_close" class="winner-close-btn">&times;</button>
+                    </div>
+                    
+                    <div class="winner-body">
+                        <div class="winner-section">
+                            <div class="winner-picture-container">
+                                <img src="${playerPictureUrl}" alt="${player.name}" class="winner-picture">
+                            </div>
+                            <div class="winner-details">
+                                <h3 class="winner-name">${player.name}</h3>
+                                <p class="winner-number">Startnummer: #${player.number}</p>
+                                <p class="player-id">Speler ID: ${player.id}</p>
+                                <div class="registration-info">
+                                    <p>✅ Speler succesvol toegevoegd aan alle spellen</p>
+                                    <p>🔄 Tegenstanders en toernooien bijgewerkt</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="winner-footer">
+                        <button id="${popupId}_closeBtn" class="btn btn-primary winner-close-button">
+                            Welkom! 🎉
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add popup to page
+    document.body.insertAdjacentHTML('beforeend', popupHTML);
+    
+    // Add event listeners to close buttons
+    const closePopup = () => {
+        const popup = document.getElementById(popupId);
+        if (popup) {
+            popup.classList.add('fade-out');
+            setTimeout(() => {
+                if (popup && popup.parentNode) {
+                    popup.remove();
+                }
+            }, 300);
+        }
+    };
+    
+    // Wait a moment for DOM to be ready, then add event listeners
+    setTimeout(() => {
+        const closeBtn = document.getElementById(`${popupId}_close`);
+        const closeBtn2 = document.getElementById(`${popupId}_closeBtn`);
+        const popup = document.getElementById(popupId);
+        
+        if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closePopup();
+            });
+        }
+        
+        if (closeBtn2) {
+            closeBtn2.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closePopup();
+            });
+        }
+        
+        if (popup) {
+            popup.addEventListener('click', (e) => {
+                if (e.target.id === popupId) {
+                    closePopup();
+                }
+            });
+        }
+    }, 100);
+    
+    // Auto-close after 6 seconds
+    setTimeout(() => {
+        const popup = document.getElementById(popupId);
+        if (popup) {
+            closePopup();
+        }
+    }, 6000);
 }
 
 // Show brain game popup with results
@@ -736,12 +837,14 @@ async function registerPlayer() {
         const result = await response.json();
         
         if (result.success) {
-            showMessage(result.message, 'success');
             playerNameInput.value = '';
             playerNumberInput.value = '';
             playerPictureInput.value = '';
             await loadPlayers();
             await loadOpponents();
+            // Refresh tournaments to include new player
+            await refreshTournaments();
+            showPlayerRegistrationPopup(result.player);
         } else {
             // Check if it's a startnummer conflict and show special popup
             if (result.message && result.message.includes('startnummer') && result.message.includes('gebruik')) {
@@ -2398,5 +2501,33 @@ function updateDarkModeToggle(isDark) {
             darkIcon.style.display = 'inline';
             lightIcon.style.display = 'none';
         }
+    }
+}
+
+// Refresh tournaments to include new players
+async function refreshTournaments() {
+    try {
+        // Check if tournaments exist and regenerate them to include new players
+        const response = await fetch('/check_tournament_results');
+        const data = await response.json();
+        
+        if (data.success) {
+            // Regenerate tournaments for games that don't have results yet
+            const gamesToRegenerate = [];
+            if (data.can_regenerate_kubb) {
+                gamesToRegenerate.push('kubb');
+            }
+            if (data.can_regenerate_petanque) {
+                gamesToRegenerate.push('petanque');
+            }
+            
+            if (gamesToRegenerate.length > 0) {
+                for (const game of gamesToRegenerate) {
+                    await fetch(`/generate_tournament/${game}`, { method: 'POST' });
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error refreshing tournaments:', error);
     }
 }
