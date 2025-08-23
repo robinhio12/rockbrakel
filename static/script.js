@@ -1027,7 +1027,7 @@ async function renderDynamicFields() {
             <div class="questions-section">
                 <h4>Wiskunde Vragen</h4>
                 <p>Machten moeten geschreven worden als x^2, x^3, etc. </p>
-                <p>De deling moet geschreven worden als 1/2.</p>
+                <p>De deling moet geschreven worden als 1/2 en in zijn simpelste vorm dus niet als 2/4.</p>
                 <p>Vermenigvuldigen moet geschreven worden als 3*2 of 3*x./p>
                 <p>Vergeet geen haakjes!</p>
                 
@@ -1096,7 +1096,7 @@ async function renderDynamicFields() {
                 
                 <div class="question-item">
                     <h5>Oefening 6. Integraal — Onbepaald</h5>
-                    <p>Bepaal de onbepaalde integraal van de functie. Gebruik ^ om een macht aan te geven:</p>
+                    <p>Bepaal de onbepaalde integraal van de functie. Je hoeft geen constante bij te voegen:</p>
                     <p>∫ (6x² − 4x + 1) dx</p>
                     <div class="form-group">
                         <label>Antwoord 6:</label>
@@ -1106,7 +1106,7 @@ async function renderDynamicFields() {
                 
                 <div class="question-item">
                     <h5>Oefening 7. Deling — Gewone deling</h5>
-                    <p>Bereken het resultaat van de volgende deling. Antwoord met een geheel getal  :</p>
+                    <p>Bereken het resultaat van de volgende deling. Antwoord met een geheel getal:</p>
                     <p>672 ÷ 16</p>
                     <div class="form-group">
                         <label>Antwoord 7:</label>
@@ -1116,7 +1116,7 @@ async function renderDynamicFields() {
                 
                 <div class="question-item">
                     <h5>Oefening 8. Afgeleide — Polynoom</h5>
-                    <p>Bepaal de afgeleide f'(x) voor de volgende functie. Gebruik ^ om een macht aan te geven:</p>
+                    <p>Bepaal de afgeleide f'(x) voor de volgende functie:</p>
                     <p>f(x) = x³ − 5x² + 4x − 7</p>
                     <div class="form-group">
                         <label>Antwoord 8:</label>
@@ -1126,7 +1126,7 @@ async function renderDynamicFields() {
                 
                 <div class="question-item">
                     <h5>Oefening 9. Afgeleide — Wortelfunctie</h5>
-                    <p>Bepaal de afgeleide g'(x) voor de volgende functie. Gebruik ^ om een macht aan te geven:</p>
+                    <p>Bepaal de afgeleide g'(x) voor de volgende functie:</p>
                     <p>g(x) = √(x + 1)</p>
                     <p>Opmerking: het domein is x > −1.</p>
                     <div class="form-group">
